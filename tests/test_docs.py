@@ -99,6 +99,11 @@ def cell_count(row: str) -> int:
     return row.count("|")
 
 
+def header_cells(block: list[str]) -> list[str]:
+    """取出表头各单元格文本，用于精确定位某张表。"""
+    return [cell.strip() for cell in block[0].strip("|").split("|")]
+
+
 class TestPlanDocument(unittest.TestCase):
     def setUp(self) -> None:
         self.text = read_plan()
@@ -147,6 +152,29 @@ class TestPlanDocument(unittest.TestCase):
         z_tables = [b for b in table_blocks(self.text) if "槽位" in b[0] and "说明" in b[0]]
         self.assertEqual(len(z_tables), 1, "应存在唯一的 z 序表")
         self.assertEqual(len(z_tables[0]) - 2, len(SLOT_IDS), "z 序表数据行数应等于 12")
+
+    def test_asset_budget_matches_total(self) -> None:
+        """§2.3 预算表逐槽位数量之和应等于声明的总数，改预算时不许漏改合计。"""
+        budget_tables = [
+            block
+            for block in table_blocks(self.text)
+            if header_cells(block) == ["槽位", "数量", "内容"]
+        ]
+        self.assertEqual(len(budget_tables), 1, "应存在唯一的素材预算表（槽位/数量/内容）")
+
+        budget = budget_tables[0]
+        per_slot: dict[str, int] = {}
+        declared_total: int | None = None
+        for row in budget[2:]:
+            cells = [cell.strip() for cell in row.strip("|").split("|")]
+            if cells[0] in SLOT_IDS:
+                per_slot[cells[0]] = int(cells[1])
+            elif cells[0] == "合计":
+                declared_total = int(cells[1])
+
+        self.assertEqual(len(per_slot), 8, "预算表应恰好覆盖 8 个启用槽位")
+        self.assertEqual(sum(per_slot.values()), 43, "预算表各槽位之和应为 43")
+        self.assertEqual(declared_total, 43, "合计行应写 43，与逐项之和一致")
 
     def test_no_placeholder_markers(self) -> None:
         hits = PLACEHOLDER_PATTERN.findall(self.text)
