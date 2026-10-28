@@ -1,0 +1,14 @@
+# 统一换行：仓库内一律 LF，避免 Windows 与 macOS 混用产生整文件 diff
+* text=auto eol=lf
+
+# 二进制文件：不做换行转换，也不做文本合并（PNG 冲突只能靠目录归属规则避免）
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.woff2 binary
+*.zip binary

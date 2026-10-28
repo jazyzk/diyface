@@ -400,6 +400,8 @@ CI 在 push 与 PR 上跑同一组命令；任一失败即阻断合并。快慢�
 | 版本 | `pyproject.toml` 语义化版本；`/healthz` 暴露版本与素材哈希 |
 | 依赖 | `uv.lock`（或 requirements 锁定）提交；Pillow 版本写死，避免快照漂移 |
 | 素材 | 单文件 < 120KB 走普通 Git；总量超 100MB 再迁移 Git LFS（提前在 M2 评估） |
+| 跨平台 | `.gitattributes` 统一 LF、`*.png` 标为 binary；文件名一律小写 |
+| 协作 | 6 人分工、GitHub 建仓与 PR 流程见 `docs/COLLABORATION.md` |
 | 代码风格 | ruff（line-length 100）+ mypy strict 于 `src/diyface/render.py`、`palettes.py` |
 | 日志 | 结构化 JSON；不记录用户 IP 与图像内容 |
 
