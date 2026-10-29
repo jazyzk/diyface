@@ -24,6 +24,20 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 PLAN = DOCS / "PLAN.md"
 COLLAB = DOCS / "COLLABORATION.md"
+HANDBOOK = DOCS / "HANDBOOK.md"
+
+#: 实施手册必须具备的二级标题。
+HANDBOOK_SECTIONS = (
+    "全员通用",
+    "角色 A",
+    "角色 B",
+    "角色 C",
+    "角色 D",
+    "角色 E",
+    "角色 F",
+    "联调日",
+    "速查",
+)
 
 #: 计划书必须具备的二级标题（子串匹配，允许标题里带编号）。
 PLAN_SECTIONS = (
@@ -85,6 +99,19 @@ def read_text(path: Path) -> str:
     return path.read_bytes().decode("utf-8")
 
 
+def unfenced_lines(text: str) -> list[str]:
+    """剔除代码围栏内的行，避免把代码注释里的 # 当成标题。"""
+    kept: list[str] = []
+    in_fence = False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            kept.append(line)
+    return kept
+
+
 def table_blocks(text: str) -> list[list[str]]:
     """把连续的表格行切成块（忽略代码围栏内的内容）。"""
     blocks: list[list[str]] = []
@@ -134,6 +161,7 @@ class MarkdownDocChecks:
         self.path = self.PATH
         self.text = read_text(self.path)
         self.lines = self.text.splitlines()
+        self.heading_lines = unfenced_lines(self.text)
 
     def test_file_exists_and_is_utf8(self) -> None:
         raw = self.path.read_bytes()
@@ -142,11 +170,11 @@ class MarkdownDocChecks:
         self.assertTrue(raw.decode("utf-8"), "应为合法 UTF-8")
 
     def test_has_exactly_one_h1(self) -> None:
-        h1 = [line for line in self.lines if line.startswith("# ")]
-        self.assertEqual(len(h1), 1, f"应只有一个 H1，实际 {len(h1)} 个")
+        h1 = [line for line in self.heading_lines if line.startswith("# ")]
+        self.assertEqual(len(h1), 1, f"应只有一个 H1，实际 {len(h1)} 个：{h1[:3]}")
 
     def test_required_sections_present(self) -> None:
-        h2 = [line[3:].strip() for line in self.lines if line.startswith("## ")]
+        h2 = [line[3:].strip() for line in self.heading_lines if line.startswith("## ")]
         joined = "\n".join(h2)
         missing = [name for name in self.REQUIRED_SECTIONS if name not in joined]
         self.assertEqual(missing, [], f"{self.path.name} 缺少章节：{missing}")
@@ -178,7 +206,7 @@ class MarkdownDocChecks:
     def test_headings_have_no_skipped_levels(self) -> None:
         """标题层级不许跳级（H1→H3），保证大纲可折叠。"""
         previous = 0
-        for line in self.lines:
+        for line in self.heading_lines:
             match = re.match(r"^(#{1,6})\s+\S", line)
             if not match:
                 continue
@@ -254,6 +282,61 @@ class TestCollaborationDocument(MarkdownDocChecks, unittest.TestCase):
         """三种授权方式都要给出可执行命令，避免队友照着卡住。"""
         for token in ("ssh-keygen", "gh auth login", "PAT"):
             self.assertIn(token, self.text, f"授权方式缺少关键步骤：{token}")
+
+
+class TestHandbookDocument(MarkdownDocChecks, unittest.TestCase):
+    PATH = HANDBOOK
+    REQUIRED_SECTIONS = HANDBOOK_SECTIONS
+    MIN_BYTES = 15_000
+
+    def _role_sections(self) -> dict[str, str]:
+        """按「## 角色 X」切分出手册的六个角色章节。"""
+        sections: dict[str, str] = {}
+        current: str | None = None
+        buffer: list[str] = []
+        for line in self.text.splitlines():
+            if line.startswith("## "):
+                if current is not None:
+                    sections[current] = "\n".join(buffer)
+                title = line[3:].strip()
+                current = next((title for title in [title] if "角色" in title), None)
+                buffer = []
+            elif current is not None:
+                buffer.append(line)
+        if current is not None:
+            sections[current] = "\n".join(buffer)
+        return sections
+
+    def test_all_six_roles_present(self) -> None:
+        """六个角色各占一章，缺一不可。"""
+        roles = self._role_sections()
+        for letter in "ABCDEF":
+            hit = [title for title in roles if f"角色 {letter}" in title]
+            self.assertEqual(len(hit), 1, f"角色 {letter} 的章节缺失或重复")
+
+    def test_each_role_has_step_by_step_guide(self) -> None:
+        """每个角色至少要给出 5 个编号步骤，否则不算「一步一步教」。"""
+        for title, content in self._role_sections().items():
+            steps = [line for line in content.splitlines() if line.startswith("### ") and "第 " in line]
+            self.assertGreaterEqual(len(steps), 5, f"{title} 的步骤不足 5 个，实际 {len(steps)} 个")
+
+    def test_each_role_declares_deliverables(self) -> None:
+        """每个角色开头都要写清交付物与工时，便于认领。"""
+        for title, content in self._role_sections().items():
+            self.assertIn("你要交付什么", content, f"{title} 缺少交付物小节")
+
+    def test_core_commands_are_documented(self) -> None:
+        for command in ("uvicorn", "pytest", "verify --all", "git switch", "git commit"):
+            self.assertIn(command, self.text, f"手册缺少关键命令：{command}")
+
+    def test_handbook_has_many_code_blocks(self) -> None:
+        fences = [line for line in self.lines if line.lstrip().startswith("```")]
+        self.assertGreaterEqual(len(fences) // 2, 24, "代码示例过少，不足以照着做")
+
+    def test_asset_split_matches_budget(self) -> None:
+        """D 的 21 张与 E 的 22 张必须合得上 PLAN 的 43 张。"""
+        for token in ("21 张", "22 张", "43 张"):
+            self.assertIn(token, self.text, f"手册缺少素材数量：{token}")
 
 
 if __name__ == "__main__":
