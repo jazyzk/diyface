@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <header class="masthead">
+      <h1>{{ title }}</h1>
+      <p class="tagline">M0 骨架：页面与接口已就绪，渲染器将在 M1 接入。</p>
+    </header>
+
+    <main class="skeleton">
+      <section class="panel">
+        <h2>启用槽位</h2>
+        <ul class="slots">
+          {% for slot in slots %}
+          <li>
+            <span class="slot-name">{{ slot.id }}</span>
+            <span class="slot-meta">z={{ slot.z }}{% if slot.tintable %} · 可着色{% endif %}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>下一步</h2>
+        <p>M1 会接上分层合成：配方进、PNG 出，并补上快照测试。</p>
+        <p class="muted">版本 {{ version }}</p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span>diyface</span>
+      <span>/healthz · /api/manifest · /api/recipe/default</span>
+    </footer>
+  </body>
+</html>
