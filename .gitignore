@@ -13,6 +13,10 @@ htmlcov/
 # 测试产物
 tests/reports/
 
+# Office 打开文件时生成的临时锁文件（Word / Excel / PowerPoint）
+~$*
+*.tmp
+
 # 编辑器/系统
 .vscode/
 .idea/
