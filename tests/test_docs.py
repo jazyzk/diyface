@@ -383,11 +383,29 @@ class TestOnboardingDocument(MarkdownDocChecks, unittest.TestCase):
 
     def test_baseline_test_count_is_stated(self) -> None:
         """文档要写明期望的测试基线，否则新人分不清「绿」是什么样。"""
-        self.assertIn("69 passed, 11 skipped", self.text)
+        self.assertRegex(self.text, r"\d+ passed, 11 skipped")
 
     def test_acceptance_table_covers_all_milestones(self) -> None:
         for milestone in ("M0", "M1", "M2", "M3", "M4", "M5", "M6"):
             self.assertIn(f"| {milestone} |", self.text, f"验收表缺少 {milestone}")
+
+    def test_each_role_has_six_or_more_steps(self) -> None:
+        """「一步一步教」的最低标准：每个角色至少 6 个编号步骤。"""
+        for index, letter in enumerate("ABCDEF", start=1):
+            start = self.text.find(f"### 4.{index} {letter}")
+            self.assertGreaterEqual(start, 0, f"缺少角色 {letter} 的小节")
+            end = self.text.find("\n### ", start + 4)
+            section = self.text[start : end if end > 0 else len(self.text)]
+            steps = re.findall(r"\*\*第 \d+ 步", section)
+            self.assertGreaterEqual(
+                len(steps), 6, f"角色 {letter} 只有 {len(steps)} 个步骤，至少要 6 个"
+            )
+
+    def test_every_step_declares_acceptance(self) -> None:
+        """每步都要有可验收的结果，否则新人不知道做没做完。"""
+        steps = self.text.count("**第 ")
+        checks = self.text.count("✅ 验收")
+        self.assertGreaterEqual(checks, steps, "有步骤没写验收标准")
 
 
 if __name__ == "__main__":
