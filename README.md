@@ -33,7 +33,7 @@ git config core.hooksPath .githooks
 主力仓库在 Gitee（公开，6 人协作不受私有仓库人数限制），GitHub 保留为备份镜像：
 
 ```powershell
-git clone https://gitee.com/<gitee-user>/diyface.git
+git clone https://gitee.com/chords-of-fate/diyface.git
 ```
 
 ## 现有接口

@@ -30,7 +30,7 @@
 Windows 装依赖：
 
 ```powershell
-git clone https://gitee.com/<gitee-user>/diyface.git
+git clone https://gitee.com/chords-of-fate/diyface.git
 cd diyface
 python -m venv .venv
 .venv\Scripts\activate

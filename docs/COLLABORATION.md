@@ -23,7 +23,7 @@
 
 ```powershell
 cd D:\头像diy
-git remote add gitee https://gitee.com/<gitee-user>/diyface.git
+git remote add gitee https://gitee.com/chords-of-fate/diyface.git
 git push gitee main
 git branch -u gitee/main
 ```
@@ -31,7 +31,7 @@ git branch -u gitee/main
 4. 其余 5 位成员：
 
 ```powershell
-git clone https://gitee.com/<gitee-user>/diyface.git
+git clone https://gitee.com/chords-of-fate/diyface.git
 ```
 
 两个注意点：
