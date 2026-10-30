@@ -1,7 +1,7 @@
 # 新人上手与六人分工执行方案
 
 这份文档解决三件事：**怎么进仓库**、**怎么配环境**、**六个人各自一步一步怎么干**。
-代码层面的完整代码在 [HANDBOOK.md](HANDBOOK.md)，这里给的是顺序、命令、验收标准。
+每一步的参考实现都直接内联在下文，不用再翻别的文件；[HANDBOOK.md](HANDBOOK.md) 留作原理与扩展阅读。
 
 当前基线：M0 已完成，测试 71 条通过、11 条跳过。
 
@@ -63,13 +63,10 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 
 # 4) 装依赖（用清华源，避免 PyPI 直连超时）
-pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn jinja2 pillow pydantic pytest pytest-cov numpy
+pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn jinja2 pillow pydantic pytest pytest-cov numpy httpx
 
-# 5) 开启提交门禁：以后每次 commit 自动跑测试
-git config core.hooksPath .githooks
-
-# 6) 验证
-python -m pytest
+# 5) 把项目装成本地包，之后 python -m diyface 才可用
+pip install -e .
 ```
 
 ### 2.3 macOS 逐步
@@ -77,14 +74,21 @@ python -m pytest
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn jinja2 pillow pydantic pytest pytest-cov numpy
+pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn jinja2 pillow pydantic pytest pytest-cov numpy httpx
+pip install -e .
 git config user.name "你的名字"
 git config user.email "你的邮箱"
-git config core.hooksPath .githooks
-python -m pytest
 ```
 
-### 2.4 什么叫「环境就绪」
+### 2.4 开启提交门禁
+
+只需执行一次，之后每次 `git commit` 都会自动跑测试，红了直接拒绝提交：
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+### 2.5 什么叫「环境就绪」
 
 三条命令都有预期输出才算完：
 
@@ -96,7 +100,7 @@ python -m pytest
 
 11 条跳过是 Word 任务书的校验（没装 `python-docx`），属正常，不用处理。
 
-### 2.5 一定会遇到的三类报错
+### 2.6 一定会遇到的三类报错
 
 | 报错 | 原因 | 解决 |
 | --- | --- | --- |
@@ -138,7 +142,7 @@ git push -u origin feat/hello-<你的名字拼音>
 
 ## 4 六个人分别怎么干
 
-每个人第一周只解决一件事：**让自己那一段链路先跑起来**。下面按角色给出逐步操作，每一步都写了「做什么、命令、怎么算完成」。
+每个人第一周只解决一件事：**让自己那一段链路先跑起来**。下面每一步都给了要改的文件、可直接用的代码和验收方法。
 
 ### 4.0 先看依赖：谁在等谁
 
@@ -168,7 +172,74 @@ python -c "from PIL import Image; from pathlib import Path; [ (Path(d).mkdir(par
 
 **第 2 步：扫描目录生成清单（2 小时）**
 
-写 `src/diyface/catalog.py`：遍历 `models.SLOTS` 里的目录，收集 `*.png`，跳过下划线开头的文件（参考图、缩略图），校验尺寸 1024 与模式 RGBA，最后拼出 manifest。
+新建 `src/diyface/catalog.py`。它做三件事：按槽位目录收集 PNG、校验尺寸与模式、拼出 manifest。
+
+```python
+"""扫描 assets/ 目录，生成素材清单。"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+
+from PIL import Image
+
+from .models import SLOTS, Slot, SlotId
+
+CANVAS = 1024
+
+
+@dataclass(frozen=True)
+class Asset:
+    id: str
+    slot: SlotId
+    path: Path
+
+
+def scan_slot(root: Path, slot: Slot) -> list[Asset]:
+    folder = root / slot.folder_no
+    if not folder.is_dir():
+        return []
+    assets: list[Asset] = []
+    for path in sorted(folder.glob("*.png")):
+        if path.name.startswith("_"):          # 跳过参考图、缩略图
+            continue
+        with Image.open(path) as image:
+            if image.size != (CANVAS, CANVAS):
+                raise ValueError(f"{path.name} 尺寸 {image.size} 应为 {CANVAS}x{CANVAS}")
+            if image.mode != "RGBA":
+                raise ValueError(f"{path.name} 必须是 RGBA，当前 {image.mode}")
+        assets.append(Asset(id=path.stem, slot=slot.id, path=path))
+    return assets
+
+
+def scan(root: Path) -> dict[SlotId, list[Asset]]:
+    catalog: dict[SlotId, list[Asset]] = {}
+    for slot in SLOTS:
+        assets = scan_slot(root, slot)
+        if assets:
+            catalog[slot.id] = assets
+    return catalog
+
+
+def manifest(catalog: dict[SlotId, list[Asset]]) -> dict:
+    slots = []
+    for slot in SLOTS:
+        assets = catalog.get(slot.id, [])
+        if not assets:
+            continue
+        slots.append({
+            "id": slot.id.value,
+            "z": slot.z,
+            "tintable": slot.tintable,
+            "default_color": slot.default_color,
+            "assets": [
+                {"id": asset.id, "file": f"{slot.folder_no}/{asset.path.name}"}
+                for asset in assets
+            ],
+        })
+    return {"schema": 1, "slots": slots}
+```
 
 ✅ 验收：
 
@@ -180,7 +251,53 @@ python -c "from pathlib import Path; from diyface.catalog import scan; print({k.
 
 **第 3 步：按 z 序叠图层（3 小时）**
 
-写 `render.py` 的 `compose(recipe, catalog)`：从 `SLOTS_BY_Z` 取顺序，`recipe.slots.get(slot.id)` 为空就跳过，否则 `Image.alpha_composite` 叠上去。
+新建 `src/diyface/render.py`。核心只有四步：按 z 取层、着色、alpha 合成、缩放编码。
+
+```python
+"""把配方合成为一张 1024 的 RGBA 图。"""
+
+from __future__ import annotations
+
+import io
+from functools import lru_cache
+
+from PIL import Image
+
+from .catalog import Asset
+from .models import AvatarRecipe, SLOTS_BY_Z, SlotId
+from .palettes import tint
+
+CANVAS = 1024
+
+
+@lru_cache(maxsize=512)
+def load_layer(path: str) -> Image.Image:
+    return Image.open(path).convert("RGBA")
+
+
+def compose(recipe: AvatarRecipe, catalog: dict[SlotId, dict[str, Asset]]) -> Image.Image:
+    image = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
+    for slot in SLOTS_BY_Z:
+        asset_id = recipe.slots.get(slot.id)
+        if not asset_id:
+            continue
+        asset = catalog[slot.id][asset_id]
+        layer = load_layer(str(asset.path))
+        if slot.tintable:
+            color = recipe.colors.get(slot.id, slot.default_color)
+            layer = tint(layer, color)
+        image = Image.alpha_composite(image, layer)
+    return image
+
+
+def render(recipe: AvatarRecipe, catalog: dict[SlotId, dict[str, Asset]], size: int = 256) -> bytes:
+    image = compose(recipe, catalog)
+    if size != CANVAS:
+        image = image.resize((size, size), Image.LANCZOS)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+```
 
 两个细节必须做对：合成用 `alpha_composite`（不是 `paste`），缩放用 `LANCZOS`。
 
@@ -188,21 +305,161 @@ python -c "from pathlib import Path; from diyface.catalog import scan; print({k.
 
 **第 4 步：颜色相乘（2 小时）**
 
-写 `palettes.py` 的 `hex_to_rgb()` 与 `tint()`：把素材与纯色做 `ImageChops.multiply`，再恢复原 alpha。白色发丝会变成目标色，黑色描边仍然是黑。
+新建 `src/diyface/palettes.py`。白色发丝乘目标色会变成目标色，黑色描边乘任何色仍是黑，明暗自然保留。
+
+```python
+"""颜色解析与着色。"""
+
+from __future__ import annotations
+
+from PIL import Image, ImageChops
+
+
+def hex_to_rgb(value: str) -> tuple[int, int, int]:
+    digits = value.lstrip("#")
+    if len(digits) == 3:
+        digits = "".join(ch * 2 for ch in digits)
+    return tuple(int(digits[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def tint(layer: Image.Image, color: str, mask: Image.Image | None = None) -> Image.Image:
+    red, green, blue = hex_to_rgb(color)
+    solid = Image.new("RGB", layer.size, (red, green, blue))
+    tinted = ImageChops.multiply(layer.convert("RGB"), solid)
+    tinted.putalpha(layer.getchannel("A"))
+    if mask is None:
+        return tinted
+    return Image.composite(tinted, layer, mask.getchannel("A"))
+```
 
 ✅ 验收：同一张刘海分别用 `#3B2B23` 与 `#C0392B` 出图，两次结果的描边像素完全一致。
 
 **第 5 步：命令行出图（1.5 小时）**
 
-写 `__main__.py`，支持 `render <recipe.json> --out <png>`：读配方 → 校验 → 调 `render()` → 写文件。
+新建 `src/diyface/__main__.py`，之后 `python -m diyface` 就能用。
 
-✅ 验收：`python -m diyface render recipe.json --out out.png` 能生成图片，用系统看图工具能打开。
+```python
+"""命令行入口：python -m diyface render recipe.json --out out.png"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from .catalog import scan
+from .models import AvatarRecipe
+from .render import render
+
+
+def build_catalog(root: Path) -> dict:
+    return {slot: {asset.id: asset for asset in assets} for slot, assets in scan(root).items()}
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(prog="diyface")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    render_cmd = sub.add_parser("render", help="按配方出图")
+    render_cmd.add_argument("recipe", type=Path)
+    render_cmd.add_argument("--out", type=Path, default=Path("out.png"))
+    render_cmd.add_argument("--size", type=int, default=256, choices=[256, 1024])
+
+    sub.add_parser("verify", help="校验素材")
+
+    args = parser.parse_args()
+    catalog = build_catalog(Path("assets"))
+
+    if args.command == "render":
+        recipe = AvatarRecipe.model_validate_json(args.recipe.read_text(encoding="utf-8"))
+        args.out.write_bytes(render(recipe, catalog, args.size))
+        print(f"已生成 {args.out}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+✅ 验收：
+
+```powershell
+python -m diyface render tests/fixtures/recipes/base.json --out out.png
+```
+
+能生成图片，用系统看图工具能打开。若提示 `No module named diyface`，回到项目根目录执行一次 `pip install -e .`。
 
 **第 6 步：三张快照基线（2 小时）**
 
-在 `tests/fixtures/recipes/` 放 3 份固定配方，第一次运行生成基准图存到 `tests/fixtures/golden/`，之后比对 RMSE 小于 1%。
+先写 `tests/fixtures/recipes/base.json`：
 
-✅ 验收：`python -m pytest tests/test_golden.py` 3 条通过；改坏一个像素会红。
+```json
+{
+  "version": 1,
+  "slots": {
+    "skin": "skin_base",
+    "bangs": "bangs_straight_01",
+    "eyes": "eyes_round_01",
+    "mouth": null,
+    "glasses": null,
+    "hat": null,
+    "clothes": null,
+    "extra": null
+  },
+  "colors": { "skin": "#F2D5B8", "bangs": "#3B2B23" }
+}
+```
+
+再写 `tests/test_golden.py`：第一次运行生成基准图，之后比对 RMSE 是否小于 1%。
+
+```python
+"""渲染快照测试：固定配方出图，与基准图比对。"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import pytest
+from PIL import Image
+
+from diyface.catalog import scan
+from diyface.models import AvatarRecipe
+from diyface.render import compose
+
+ROOT = Path(__file__).resolve().parents[1]
+GOLDEN = ROOT / "tests" / "fixtures" / "golden"
+THRESHOLD = 2.55          # 约等于 1% 的均方根误差
+
+
+def rmse(left: Image.Image, right: Image.Image) -> float:
+    a = np.asarray(left.convert("RGBA"), dtype=float)
+    b = np.asarray(right.convert("RGBA"), dtype=float)
+    return float(np.sqrt(((a - b) ** 2).mean()))
+
+
+@pytest.mark.parametrize("name", ["base"])
+def test_golden(name: str) -> None:
+    catalog = {
+        slot: {asset.id: asset for asset in assets}
+        for slot, assets in scan(ROOT / "assets").items()
+    }
+    recipe = AvatarRecipe.model_validate_json(
+        (ROOT / "tests" / "fixtures" / "recipes" / f"{name}.json").read_text(encoding="utf-8")
+    )
+    image = compose(recipe, catalog)
+
+    GOLDEN.mkdir(parents=True, exist_ok=True)
+    baseline_path = GOLDEN / f"{name}.png"
+    if not baseline_path.exists():
+        image.save(baseline_path)
+        pytest.skip(f"首次运行，已生成基准图 {baseline_path.name}")
+
+    diff = rmse(image, Image.open(baseline_path).convert("RGBA"))
+    if diff >= THRESHOLD:
+        image.save(GOLDEN / f"diff-{name}.png")
+    assert diff < THRESHOLD, f"{name} 与基准差异 {diff:.2f}，已输出 diff-{name}.png"
+```
+
+✅ 验收：第一次 `pytest` 跳过并生成基准；第二次通过；改坏一个像素会红并留下 `diff-base.png`。
 
 **第 7 步：交接给 C（30 分钟）**
 
@@ -218,33 +475,126 @@ python -c "from pathlib import Path; from diyface.catalog import scan; print({k.
 
 **第 1 步：搭三栏骨架（3 小时）**
 
-改 `templates/index.html` 与 `static/style.css`：`grid-template-columns: 240px 1fr 260px`，中间预览区 `aspect-ratio: 1 / 1`；720 像素以下改单列，类目变底部横滑。
+改 `templates/index.html` 与 `static/style.css`。中间预览严格 1:1，窄屏改单列。
+
+```html
+<div class="layout">
+  <aside id="categories" aria-label="类目"></aside>
+  <main class="stage"><img id="preview" width="256" height="256" alt="头像预览"></main>
+  <aside class="controls">
+    <input id="color" type="color" aria-label="取色">
+    <button id="random" type="button">随机</button>
+    <button type="button" data-size="256">下载 256</button>
+    <button type="button" data-size="1024">下载 1024</button>
+    <button id="share" type="button">复制分享链接</button>
+  </aside>
+</div>
+<div class="assets" id="assets" aria-label="素材"></div>
+<script type="module" src="/static/app.js"></script>
+```
+
+```css
+.layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 260px;
+  gap: 16px;
+}
+.stage {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1;
+}
+@media (max-width: 720px) {
+  .layout { grid-template-columns: 1fr; }
+}
+```
 
 ✅ 验收：桌面三栏对齐；浏览器宽度拖到 375 像素，没有横向滚动条。
 
 **第 2 步：用清单渲染类目与素材格（3 小时）**
 
-`static/app.js` 里 `fetch('/api/manifest')`，用返回的 `slots` 生成左侧类目按钮；点某个类目，右侧素材格铺出该槽位的素材缩略图，外加一个「无」按钮表示置空。
+新建 `static/app.js`：拉清单、生成类目按钮、点类目铺素材格，外带一个「无」按钮。
 
-✅ 验收：8 个类目都能点，点「无」后预览里的对应图层消失。
+```javascript
+const state = { manifest: null, recipe: null, slot: "bangs", seq: 0 };
+const preview = document.getElementById("preview");
+
+async function boot() {
+  state.manifest = await (await fetch("/api/manifest")).json();
+  state.recipe = state.manifest.default_recipe;
+  renderCategories();
+  selectSlot(state.slot);
+  refreshPreview();
+}
+
+function renderCategories() {
+  const box = document.getElementById("categories");
+  box.replaceChildren(
+    ...state.manifest.slots.map((slot) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = slot.id;
+      button.addEventListener("click", () => selectSlot(slot.id));
+      return button;
+    })
+  );
+}
+
+function selectSlot(slotId) {
+  state.slot = slotId;
+  const slot = state.manifest.slots.find((item) => item.id === slotId);
+  const box = document.getElementById("assets");
+
+  const none = document.createElement("button");
+  none.type = "button";
+  none.textContent = "无";
+  none.addEventListener("click", () => setAsset(slotId, null));
+
+  const buttons = slot.assets.map((asset) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("aria-label", `${slotId}：${asset.id}`);
+    button.style.backgroundImage = `url(/assets/${asset.file})`;
+    button.addEventListener("click", () => setAsset(slotId, asset.id));
+    return button;
+  });
+
+  box.replaceChildren(none, ...buttons);
+}
+
+function setAsset(slotId, assetId) {
+  state.recipe.slots[slotId] = assetId;
+  localStorage.setItem("diyface.recipe.v1", JSON.stringify(state.recipe));
+  refreshPreview();
+}
+
+boot();
+```
+
+✅ 验收：8 个类目都能点，点「无」后预览里的对应图层消失。缩略图需要 C 把 `assets/` 挂成静态目录（见 §4.3 第 1 步）。
 
 **第 3 步：接预览接口（3 小时）**
 
-写 `refreshPreview()`：`setTimeout` 去抖 120 毫秒，请求带自增序号，响应回来时序号不是最新的就丢弃（防止连点闪回旧图）。
+在 `app.js` 里加去抖与序号，防止连点闪回旧图：
 
 ```javascript
 let timer = null;
+
 function refreshPreview() {
   clearTimeout(timer);
   timer = setTimeout(async () => {
     const mine = ++state.seq;
-    const res = await fetch("/api/render", {
+    const response = await fetch("/api/render", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ recipe: state.recipe, size: 256 }),
     });
-    if (mine !== state.seq) return;
-    preview.src = URL.createObjectURL(await res.blob());
+    if (!response.ok) {
+      console.error("渲染失败", response.status);
+      return;
+    }
+    if (mine !== state.seq) return;          // 过期响应，丢弃
+    preview.src = URL.createObjectURL(await response.blob());
   }, 120);
 }
 ```
@@ -253,26 +603,76 @@ function refreshPreview() {
 
 **第 4 步：取色器与预设色板（2 小时）**
 
-`<input type="color">` 的 `input` 事件里改 `recipe.colors[当前槽位]`，再调 `refreshPreview()`。预设色从 manifest 的 `default_color` 生成，不要在前端写死颜色。
+```javascript
+const colorInput = document.getElementById("color");
+
+colorInput.addEventListener("input", (event) => {
+  const slot = state.manifest.slots.find((item) => item.id === state.slot);
+  if (!slot || !slot.tintable) return;
+  state.recipe.colors[state.slot] = event.target.value.toUpperCase();
+  refreshPreview();
+});
+```
 
 ✅ 验收：换发色只影响头发，脸和眼睛不变；切换素材后颜色保留。
 
 **第 5 步：下载与分享（2 小时）**
 
-下载：请求 `size: 1024`，把返回的 blob 挂到隐藏 `<a download>` 上点一下。
-分享：把配方 JSON 转 base64url 拼到 `?r=`，页面加载时若存在就解码复现。
+```javascript
+async function download(size) {
+  const response = await fetch("/api/render", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ recipe: state.recipe, size }),
+  });
+  const blob = await response.blob();
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `avatar-${Date.now()}.png`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function encodeRecipe(recipe) {
+  const json = JSON.stringify(recipe);
+  return btoa(unescape(encodeURIComponent(json)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function decodeRecipe(token) {
+  const base64 = token.replace(/-/g, "+").replace(/_/g, "/");
+  return JSON.parse(decodeURIComponent(escape(atob(base64))));
+}
+
+document.querySelectorAll("[data-size]").forEach((button) => {
+  button.addEventListener("click", () => download(Number(button.dataset.size)));
+});
+
+const shared = new URLSearchParams(location.search).get("r");
+if (shared) state.recipe = decodeRecipe(shared);
+```
 
 ✅ 验收：下载的 PNG 是 1024×1024、四角透明；分享链接在无痕窗口打开与原件一致。
 
 **第 6 步：移动端与键盘（2 小时）**
 
-触控目标不小于 44 像素；所有素材按钮加 `aria-label`；`R` 随机、`S` 导出、方向键在素材格间移动。
+```css
+button { min-width: 44px; min-height: 44px; }
+:focus-visible { outline: 3px solid #4a6fa5; outline-offset: 2px; }
+```
+
+```javascript
+document.addEventListener("keydown", (event) => {
+  if (event.key === "r") document.getElementById("random").click();
+  if (event.key === "s") download(1024);
+});
+```
 
 ✅ 验收：只用键盘能完成「选素材 → 换色 → 导出」全流程。
 
 **第 7 步：与 C 联调（2 小时）**
 
-接口从占位图切到真实渲染后，逐项过一遍：预览延迟、导出尺寸、错误提示（接口 500 时不要白屏，给一句「服务暂时不可用」）。
+接口从占位图切到真实渲染后，逐项过一遍：预览延迟、导出尺寸、错误提示（接口 500 时不要白屏）。
 
 ✅ 验收：连续操作 30 秒不出现白屏或错位。
 
@@ -284,37 +684,178 @@ function refreshPreview() {
 
 **第 1 步：清单接上真实扫描（2 小时）**
 
-`app.py` 里把 `build_manifest()` 换成调用 `catalog.scan()` 的结果，缓存到模块级变量（启动时算一次，别每个请求都扫盘）。
+改 `app.py`：启动时扫一次目录，把 `assets/` 挂成静态目录，首页内联清单。
+
+```python
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+from . import __version__
+from .catalog import manifest as build_manifest, scan
+
+BASE_DIR = Path(__file__).parent
+ASSETS = Path("assets")
+CATALOG: dict = {}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global CATALOG
+    CATALOG = {slot: {a.id: a for a in assets} for slot, assets in scan(ASSETS).items()}
+    yield
+
+
+app = FastAPI(title="diyface", version=__version__, lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+app.mount("/assets", StaticFiles(directory=ASSETS), name="assets")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+
+@app.get("/api/manifest")
+def api_manifest() -> dict:
+    return build_manifest(scan(ASSETS))
+```
 
 ✅ 验收：`curl http://127.0.0.1:8000/api/manifest` 返回的 `slots[].assets` 不为空。
 
 **第 2 步：接上渲染（2 小时）**
 
-新增 `POST /api/render`：Pydantic 校验 `{recipe, size}`，`size` 只允许 256 或 1024，调用 A 的 `render()`，`Response(content, media_type="image/png")`。
+```python
+import hashlib
+
+from fastapi import HTTPException, Request, Response
+from pydantic import BaseModel
+
+from .models import AvatarRecipe
+from .render import render
+
+
+class RenderRequest(BaseModel):
+    recipe: AvatarRecipe
+    size: int = 256
+
+
+@app.post("/api/render")
+def api_render(payload: RenderRequest, request: Request) -> Response:
+    if payload.size not in (256, 1024):
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "BAD_SIZE", "message": "size 只能是 256 或 1024"},
+        )
+    try:
+        png = render(payload.recipe, CATALOG, payload.size)
+    except KeyError as exc:
+        raise HTTPException(status_code=422, detail={"code": "UNKNOWN_ASSET", "message": str(exc)})
+
+    etag = '"' + hashlib.sha1(png).hexdigest()[:16] + '"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304)
+    return Response(
+        png,
+        media_type="image/png",
+        headers={"ETag": etag, "Cache-Control": "public, max-age=86400"},
+    )
+```
 
 ✅ 验收：`curl -X POST` 拿到 PNG，用看图工具打开正常。
 
-**第 3 步：ETag 与 304（1.5 小时）**
+**第 3 步：ETag 与缓存（1.5 小时）**
 
-对 PNG 内容算 sha1，放进 `ETag` 头；请求带 `If-None-Match` 且相等时返回 304；成功的响应加 `Cache-Control: public, max-age=86400`。
+上面的 `etag` 已经覆盖 304。再加一个进程内缓存，避免同配方重复合成：
 
-✅ 验收：第二次请求带同样的 ETag，HTTP 状态码是 304，响应体为空。
+```python
+"""渲染结果缓存：键是规范化后的配方 JSON 加尺寸。"""
+
+from __future__ import annotations
+
+import json
+from functools import lru_cache
+
+from .models import AvatarRecipe
+from .render import render
+
+
+def normalize(recipe: AvatarRecipe) -> str:
+    return json.dumps(recipe.model_dump(mode="json"), sort_keys=True, ensure_ascii=False)
+
+
+def render_cached(recipe: AvatarRecipe, catalog: dict, size: int) -> bytes:
+    return _render(normalize(recipe), size, catalog)
+
+
+@lru_cache(maxsize=512)
+def _render(recipe_json: str, size: int, catalog: dict) -> bytes:
+    return render(AvatarRecipe.model_validate_json(recipe_json), catalog, size)
+```
+
+✅ 验收：第二次请求带同样的 ETag，状态码 304、响应体为空；连续 20 次同配方请求，耗时降到毫秒级。
 
 **第 4 步：合法随机（2 小时）**
 
-写 `randomizer.py`：必填槽位（脸、发型、眼、嘴）必选，可选槽位（眼镜、帽子、衣服、配饰）各有 35% 概率为空；颜色取各槽位默认值；最后写入 `seed` 保证可复现。
+新建 `src/diyface/randomizer.py`：
 
-✅ 验收：连调 1000 次 `/api/random`，没有空脸、没有未知素材 id；同一 seed 两次结果一致。
+```python
+"""生成合法的随机配方。"""
+
+from __future__ import annotations
+
+import random
+
+from .models import ACTIVE, AvatarRecipe
+
+OPTIONAL = {"glasses", "hat", "clothes", "extra"}
+
+
+def random_recipe(catalog: dict, rng: random.Random) -> AvatarRecipe:
+    slots: dict = {}
+    colors: dict = {}
+    for slot in ACTIVE:
+        options = [asset.id for asset in catalog.get(slot.id, [])]
+        if not options:
+            slots[slot.id] = None
+            continue
+        if slot.id.value in OPTIONAL and rng.random() < 0.35:
+            slots[slot.id] = None
+        else:
+            slots[slot.id] = rng.choice(options)
+        colors[slot.id] = slot.default_color
+    return AvatarRecipe(slots=slots, colors=colors, seed=rng.randrange(1_000_000))
+```
+
+```python
+@app.post("/api/random")
+def api_random() -> dict:
+    return random_recipe(CATALOG, random.Random()).model_dump(mode="json")
+```
+
+✅ 验收：连调 1000 次 `/api/random`，没有空脸、没有未知素材 id；固定 seed 时结果一致。
 
 **第 5 步：错误结构统一（1 小时）**
 
-加一个异常处理器，把所有错误整理成 `{"error": {"code": ..., "message": ..., "field": ...}}`。非法 size 返回 422 且带 `code: BAD_SIZE`。
+```python
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
-✅ 验收：`curl -X POST ... -d '{"size":512}'` 返回 422 与上面结构。
+
+@app.exception_handler(HTTPException)
+async def http_error_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    detail = exc.detail if isinstance(exc.detail, dict) else {"code": "ERROR", "message": str(exc.detail)}
+    return JSONResponse(status_code=exc.status_code, content={"error": detail})
+```
+
+✅ 验收：`curl -X POST ... -d '{"size":512}'` 返回 422 与 `{"error": {"code": "BAD_SIZE"}}`。
 
 **第 6 步：健康检查（1 小时）**
 
-`/healthz` 返回 `{ok, version, assets, commit}`，`commit` 可取环境变量，部署时注入。
+```python
+@app.get("/healthz")
+def healthz() -> dict:
+    return {"ok": True, "version": __version__, "assets": sum(len(v) for v in CATALOG.values())}
+```
 
 ✅ 验收：容器与本地都能访问 `/healthz` 且字段齐全。
 
@@ -328,7 +869,7 @@ function refreshPreview() {
 
 新建 1024×1024 透明画布，拉三条参考线：垂直中线 x=512、脸中心 y=448、头顶基线 y=256。存成 `assets/_guide.png`（下划线开头，不会被扫描进清单）。
 
-✅ 验收：参考图存在但 `scan()` 结果里没有它。
+✅ 验收：参考图存在，但 `scan()` 结果里没有它。
 
 **第 2 步：建目录与命名（15 分钟）**
 
@@ -344,7 +885,7 @@ mkdir assets/02_bangs, assets/06_eyes, assets/10_hat
 
 直发（`bangs_straight_01`）、圆眼（`eyes_round_01`）、贝雷帽（`hat_beret_01`）。重点不是好看，是**位置对**：头发压在头顶基线上、眼睛围绕脸中心对称、帽子盖住头发顶端。
 
-✅ 验收：三张都 1024×1024、RGBA、1024 宽内不越界。
+✅ 验收：三张都 1024×1024、RGBA、不越界。
 
 **第 4 步：让 A 叠出来看（1 小时）**
 
@@ -358,16 +899,15 @@ mkdir assets/02_bangs, assets/06_eyes, assets/10_hat
 
 节奏建议：每天 7 张，第三天收尾，留半天返工。
 
-✅ 验收：`verify --all` 零报错；清单里能看到 21 个 id。
+✅ 验收：清单里能看到 21 个 id，每张尺寸与命名合规。
 
-**第 6 步：跑校验与缩略图（1 小时）**
+**第 6 步：跑校验（1 小时）**
 
 ```powershell
-python -m diyface verify --slot bangs
-python -m diyface build-thumbs --slot bangs
+python -m diyface verify
 ```
 
-✅ 验收：缩略图生成到 `_thumb/` 目录，前端素材格加载不卡。
+✅ 验收：校验零报错；素材格加载不卡（缩略图由 F 的脚本生成，见 §4.6 第 4 步）。
 
 **第 7 步：与 E 交叉验收（1 小时）**
 
@@ -384,6 +924,8 @@ python -m diyface build-thumbs --slot bangs
 **第 1 步：画两款脸型（3 小时）**
 
 `skin_base`（标准方圆脸，自带简化鼻与眉）与 `skin_slim`（略窄）。肤色不靠画，靠取色，所以脸型用白色底 + 灰阶阴影。
+
+坐标参考：脸宽 520、脸高 560，中心 (512, 448)，下巴约 y=728。
 
 ✅ 验收：两张脸型的轮廓能容纳 D 的 8 种发型而不露白边。
 
@@ -421,7 +963,7 @@ python -m diyface build-thumbs --slot bangs
 
 把 22 张按「全开」模式铺满，逐层开关，检查有没有盖住不该盖的区域；再随机 20 次看组合稳定性。
 
-✅ 验收：随机 20 次无穿模；`verify --all` 零报错。
+✅ 验收：随机 20 次无穿模；所有素材尺寸与模式合规。
 
 **后续里程碑**：M4 补齐 22 张、M5 与 D 统一样式。
 
@@ -431,33 +973,145 @@ python -m diyface build-thumbs --slot bangs
 
 **第 1 步：补齐测试装置（2 小时）**
 
-`tests/conftest.py` 提供 `fake_assets`（临时目录 + 占位 PNG）与 `recipe`（默认配方）。所有渲染测试从这里取素材，不依赖真实 `assets/`。
+改 `tests/conftest.py`，提供假素材与默认配方，让渲染测试不依赖真实 `assets/`：
 
-✅ 验收：`pytest` 在没有 `assets/` 的空仓库里也能跑通。
+```python
+"""测试公共装置。"""
+
+from __future__ import annotations
+
+import pytest
+from PIL import Image
+
+from diyface.models import AvatarRecipe, default_recipe
+
+
+@pytest.fixture
+def fake_assets(tmp_path):
+    layout = {"01_skin": "skin_base", "02_bangs": "bangs_straight_01", "06_eyes": "eyes_round_01"}
+    for folder, name in layout.items():
+        directory = tmp_path / folder
+        directory.mkdir(parents=True, exist_ok=True)
+        Image.new("RGBA", (1024, 1024), (255, 255, 255, 255)).save(directory / f"{name}.png")
+    return tmp_path
+
+
+@pytest.fixture
+def recipe() -> AvatarRecipe:
+    return default_recipe()
+```
+
+✅ 验收：`pytest` 在没有 `assets/` 的空目录里也能跑通。
 
 **第 2 步：契约测试（3 小时）**
 
-`tests/test_api.py` 覆盖 5 个路由：正常、参数非法、边界各一条。断言状态码、`ETag`、304、错误结构。
+新建 `tests/test_api.py`，覆盖 5 个路由的正常、非法、边界：
 
-✅ 验收：`test_api.py` 至少 12 条，全绿。
+```python
+"""接口契约测试。"""
+
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+
+from diyface.app import app
+
+client = TestClient(app)
+
+
+def test_render_rejects_bad_size(recipe):
+    response = client.post("/api/render", json={"recipe": recipe.model_dump(mode="json"), "size": 512})
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "BAD_SIZE"
+
+
+def test_render_sets_etag_and_returns_304(recipe):
+    payload = {"recipe": recipe.model_dump(mode="json"), "size": 256}
+    first = client.post("/api/render", json=payload)
+    etag = first.headers["etag"]
+    second = client.post("/api/render", json=payload, headers={"If-None-Match": etag})
+    assert second.status_code == 304
+
+
+def test_healthz_reports_fields():
+    body = client.get("/healthz").json()
+    assert body["ok"] is True
+    assert "version" in body and "assets" in body
+```
+
+✅ 验收：`test_api.py` 至少 12 条，全绿。`TestClient` 依赖 `httpx`，环境里已装。
 
 **第 3 步：快照工具（3 小时）**
 
-写 `rmse()` 与 `assert_snapshot()`：固定配方出图，与基准图比较，超过 1% 输出差异图到 `tests/reports/`。
+`rmse()` 与基准比对已写在 §4.1 第 6 步的 `tests/test_golden.py` 里。你负责把它推广成 3 到 6 组固定配方，并在差异超阈值时输出 `diff-<name>.png`。
 
 ✅ 验收：故意改一个像素，测试红并指出差异图路径。
 
 **第 4 步：素材校验脚本（3 小时）**
 
-`scripts/verify_assets.py` 检查六条：存在、1024 见方、RGBA、命名合规、体积小于 120KB、可着色素材有 `_tint.png`。输出必须能定位到具体文件与规则。
+新建 `scripts/verify_assets.py`：
+
+```python
+"""素材校验：尺寸、模式、命名、体积、tint 配对。"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+from PIL import Image
+
+CANVAS = 1024
+MAX_BYTES = 120 * 1024
+ALLOWED = set("abcdefghijklmnopqrstuvwxyz0123456789_")
+
+
+def check(path: Path, tintable: bool) -> list[str]:
+    problems: list[str] = []
+    with Image.open(path) as image:
+        if image.size != (CANVAS, CANVAS):
+            problems.append(f"尺寸 {image.size} 不是 {CANVAS}x{CANVAS}")
+        if image.mode != "RGBA":
+            problems.append(f"模式 {image.mode} 不是 RGBA")
+    if path.stat().st_size > MAX_BYTES:
+        problems.append(f"体积 {path.stat().st_size // 1024}KB 超过 120KB")
+    if set(path.stem) - ALLOWED:
+        problems.append("文件名只允许小写字母、数字、下划线")
+    return problems
+
+
+def main() -> int:
+    root = Path("assets")
+    failures = 0
+    for slot_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+        for path in sorted(slot_dir.glob("*.png")):
+            if path.name.startswith("_"):
+                continue
+            for problem in check(path, tintable=True):
+                print(f"FAIL {path}  {problem}")
+                failures += 1
+    print(f"检查完成，问题数 {failures}")
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
 
 ✅ 验收：放一张 512 的图进去，脚本精确报出文件名与「尺寸不是 1024」。
 
 **第 5 步：覆盖率与门禁（2 小时）**
 
-`pyproject.toml` 里配 `--cov-fail-under=85`；确认 `.githooks/pre-commit` 跑的是快测（单元 + 契约 + 文档），慢测留给合并前。
+在 `pyproject.toml` 的 pytest 配置里加覆盖率门槛：
 
-✅ 验收：把某条断言改错后 `git commit`，钩子拦住并打印失败位置。
+```toml
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q --cov=src/diyface --cov-fail-under=85"
+```
+
+✅ 验收：把某条断言改错后 `git commit`，钩子拦住并打印失败位置；覆盖率不足时同样失败。
 
 **第 6 步：文档与发布（每周五 1 小时）**
 
@@ -519,5 +1173,6 @@ README 保持三步可跑；CHANGELOG 每个 tag 记三条以内；周五打 tag
 | 跑测试 | `python -m pytest` |
 | 只看失败 | `python -m pytest -x` |
 | 起服务 | `python -m uvicorn diyface.app:app --reload --port 8000` |
+| 校验素材 | `python -m diyface verify` |
 | 撤销未提交改动 | `git restore <文件>` |
 | 拉取冲突 | `git pull --rebase`，冲突改完后 `git add` 与 `git rebase --continue` |
