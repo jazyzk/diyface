@@ -1,6 +1,7 @@
 # 团队协作与 Gitee 托管指南（6 人）
 
 配套 [docs/PLAN.md](PLAN.md)：那份讲「做什么」，这份只讲「怎么一起做」。
+第一次加入的新人先看 [docs/ONBOARDING.md](ONBOARDING.md)（加入仓库、配环境、练手 PR）；
 角色分工的逐步操作教程在 [docs/HANDBOOK.md](HANDBOOK.md)，六个人各看自己那一章。
 
 ## 1. 现状与卡点

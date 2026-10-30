@@ -57,7 +57,8 @@ docs/             计划书、协作指南、实施手册、实验任务书
 
 ## 文档
 
+- [新人上手与分工执行方案](docs/ONBOARDING.md)
 - [实施计划书](docs/PLAN.md)
 - [六人分工实施手册](docs/HANDBOOK.md)
-- [协作与 GitHub 托管指南](docs/COLLABORATION.md)
+- [协作与 Gitee 托管指南](docs/COLLABORATION.md)
 - [实验任务书](docs/DIY头像生成器-实验任务书.docx)

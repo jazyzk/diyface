@@ -25,6 +25,18 @@ DOCS = ROOT / "docs"
 PLAN = DOCS / "PLAN.md"
 COLLAB = DOCS / "COLLABORATION.md"
 HANDBOOK = DOCS / "HANDBOOK.md"
+ONBOARDING = DOCS / "ONBOARDING.md"
+
+#: 新人上手文档必须具备的二级标题。
+ONBOARDING_SECTIONS = (
+    "加入仓库",
+    "配好环境",
+    "第一次提交",
+    "六个人分别怎么干",
+    "每周节奏",
+    "交付与验收",
+    "速查",
+)
 
 #: 实施手册必须具备的二级标题。
 HANDBOOK_SECTIONS = (
@@ -337,6 +349,45 @@ class TestHandbookDocument(MarkdownDocChecks, unittest.TestCase):
         """D 的 21 张与 E 的 22 张必须合得上 PLAN 的 43 张。"""
         for token in ("21 张", "22 张", "43 张"):
             self.assertIn(token, self.text, f"手册缺少素材数量：{token}")
+
+
+class TestOnboardingDocument(MarkdownDocChecks, unittest.TestCase):
+    PATH = ONBOARDING
+    REQUIRED_SECTIONS = ONBOARDING_SECTIONS
+    MIN_BYTES = 8000
+
+    def test_six_roles_have_weekly_goals(self) -> None:
+        """每个角色都要有「本周目标」，否则新人不知道从哪下手。"""
+        for letter in "ABCDEF":
+            heading = f"### 4.{'ABCDEF'.index(letter) + 1} {letter}"
+            start = self.text.find(heading)
+            self.assertGreaterEqual(start, 0, f"缺少角色 {letter} 的小节")
+            window = self.text[start:start + 1200]
+            self.assertIn("本周目标", window, f"角色 {letter} 没有写本周目标")
+
+    def test_environment_steps_are_runnable(self) -> None:
+        """环境配置必须给出可直接复制的命令，而不是泛泛而谈。"""
+        for token in (
+            "git clone https://gitee.com/chords-of-fate/diyface.git",
+            "python -m venv .venv",
+            "pip install -i https://pypi.tuna.tsinghua.edu.cn/simple",
+            "git config core.hooksPath .githooks",
+            "python -m pytest",
+        ):
+            self.assertIn(token, self.text, f"环境配置缺少命令：{token}")
+
+    def test_first_pr_walkthrough_is_complete(self) -> None:
+        """练手 PR 必须覆盖分支、提交、推送、合并四步。"""
+        for token in ("git switch -c", "git commit", "git push -u", "Squash"):
+            self.assertIn(token, self.text, f"练手 PR 缺少步骤：{token}")
+
+    def test_baseline_test_count_is_stated(self) -> None:
+        """文档要写明期望的测试基线，否则新人分不清「绿」是什么样。"""
+        self.assertIn("69 passed, 11 skipped", self.text)
+
+    def test_acceptance_table_covers_all_milestones(self) -> None:
+        for milestone in ("M0", "M1", "M2", "M3", "M4", "M5", "M6"):
+            self.assertIn(f"| {milestone} |", self.text, f"验收表缺少 {milestone}")
 
 
 if __name__ == "__main__":
