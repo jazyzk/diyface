@@ -279,8 +279,8 @@ class TestCollaborationDocument(MarkdownDocChecks, unittest.TestCase):
         self.assertIn("43 张", self.text, "两人合计应为 43 张")
 
     def test_auth_options_documented(self) -> None:
-        """三种授权方式都要给出可执行命令，避免队友照着卡住。"""
-        for token in ("ssh-keygen", "gh auth login", "PAT"):
+        """三种授权方式都要给出可执行步骤，避免队友照着卡住。"""
+        for token in ("ssh-keygen", "私人令牌", "gitee.com"):
             self.assertIn(token, self.text, f"授权方式缺少关键步骤：{token}")
 
 

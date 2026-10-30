@@ -30,7 +30,7 @@
 Windows 装依赖：
 
 ```powershell
-git clone https://github.com/jazyzk/diyface.git
+git clone https://gitee.com/<gitee-user>/diyface.git
 cd diyface
 python -m venv .venv
 .venv\Scripts\activate
@@ -115,7 +115,7 @@ git commit -m "feat(render): 按 z 序合成图层"
 git push -u origin feat/a-render-core
 ```
 
-然后到 GitHub 点 Compare and pull request，写清楚改了什么、怎么验证，找一个人 review，Squash 合并。
+然后到 Gitee 仓库页点「Pull Requests」→ 新建，选你的分支，写清楚改了什么、怎么验证，找一个人 review，Squash 合并。
 
 三条纪律：
 
@@ -625,7 +625,7 @@ function shareLink() {
 | `cache.py` | ETag 与 304 生效 |
 | `randomizer.py` | 随机不穿模、seed 可复现 |
 | `Dockerfile` | 镜像可跑，启动即服务 |
-| `.github/workflows/ci.yml` | push 与 PR 自动跑测试 |
+| `.githooks/pre-commit`、`.github/workflows/ci.yml` | 本地提交门禁（主力）+ GitHub 镜像 CI |
 
 时间：2 天（M0 半天，M5 一天，M6 半天）。
 
@@ -759,11 +759,22 @@ CMD ["uvicorn", "diyface.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
 **完成标志**：`docker run -p 8000:8000` 后首页与出图都正常。
 
-### 4.6 第 5 步：CI（约 2 小时）
+### 4.6 第 5 步：CI 与本地门禁（约 2 小时）
+
+主力远端是 Gitee，它没有 GitHub Actions，所以门禁放在本地钩子 `.githooks/pre-commit`：每次 commit 自动跑测试，红了直接拒绝提交。成员只需执行一次：
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+GitHub 仓库保留为镜像，那边的 Actions 继续跑同一套检查（`.github/workflows/ci.yml`，内容以仓库里的实际文件为准）：
 
 ```yaml
 name: ci
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -772,12 +783,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - run: python -m pytest -q --cov=src/diyface --cov-fail-under=85
-      - run: python -m diyface verify --all
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest
 ```
 
-**完成标志**：随便提一个 PR，Actions 跑绿，红的话能看到具体哪条断言挂了。
+**完成标志**：`git config core.hooksPath .githooks` 之后，故意写坏一个测试再 `git commit`，钩子应当拦住并打印失败断言；对 GitHub 镜像仓库提 PR 时 Actions 也能跑绿。
 
 ---
 

@@ -1,4 +1,4 @@
-# 团队协作与 GitHub 托管指南（6 人）
+# 团队协作与 Gitee 托管指南（6 人）
 
 配套 [docs/PLAN.md](PLAN.md)：那份讲「做什么」，这份只讲「怎么一起做」。
 角色分工的逐步操作教程在 [docs/HANDBOOK.md](HANDBOOK.md)，六个人各看自己那一章。
@@ -7,60 +7,55 @@
 
 | 事项 | 状态 | 说明 |
 | --- | --- | --- |
-| 本地仓库 | 就绪 | `master` 分支，3 个提交，工作区干净 |
-| 网络至 GitHub | 可用 | 需 `http.sslBackend=openssl`，默认 schannel 握手失败 |
-| `gh` CLI | 未安装 | 可用 `winget install --id GitHub.cli -e` 补上 |
-| SSH 密钥 | 无 | 需生成并把公钥加到 GitHub |
-| 远端仓库 | 未创建 | 见 §2 |
-| 账号授权 | 待你完成 | 登录/授权必须在浏览器里由人完成，我无法代办 |
+| 本地仓库 | 就绪 | `main` 分支，M0 已提交，工作区干净 |
+| 网络至 GitHub | 不稳定 | 实测出现过 21 秒连接超时，组员无法登录 |
+| 网络至 Gitee | 稳定 | 同一时段实测 0.1 秒连通 |
+| 远端仓库 | GitHub 已有，Gitee 待建 | 建好后 GitHub 降级为备份镜像 |
+| Gitee 账号 | 需要实名 | 公开仓库要求实名认证 |
 
-结论：**可以上传，只差一个远端地址和一次授权**。
+结论：**主力远端换成 Gitee，GitHub 保留为备份镜像**。原因是可访问性和注册门槛，不是技术偏好。
 
 ## 2. 一次性建仓（约 5 分钟）
 
-先定归属：课程/社团项目建议建在**个人账号 + 邀请协作者**，长期维护再迁 Organization。仓库名建议 `diyface`，Private 即可。
-
-路线 A（网页建仓，最稳）：
-
-1. GitHub → New repository → 名称 `diyface` → **不要**勾选 README / .gitignore / license（避免首次推送冲突）。
-2. 回到本机执行：
+1. 打开 <https://gitee.com/projects/new>。
+2. 仓库名 `diyface`，选 **公开**，**不要**勾选「使用 Readme 文件初始化仓库」（否则首次推送要额外合并）。
+3. 建完后在本机执行：
 
 ```powershell
-git remote add origin git@github.com:<你的用户名>/diyface.git
-git branch -M main
-git push -u origin main
+cd D:\头像diy
+git remote add gitee https://gitee.com/<gitee-user>/diyface.git
+git push gitee main
+git branch -u gitee/main
 ```
 
-路线 B（`gh` CLI 一步到位）：
+4. 其余 5 位成员：
 
 ```powershell
-winget install --id GitHub.cli -e
-gh auth login --git-protocol ssh
-gh repo create diyface --private --source . --remote origin --push
+git clone https://gitee.com/<gitee-user>/diyface.git
 ```
 
-注意两点：
+两个注意点：
 
-- 当前分支叫 `master`，建议改 `main` 与外网惯例一致（上面已含 `git branch -M main`）。
-- 首次推送前确认 `.gitignore` 与 `.gitattributes` 已提交，否则队友一 clone 就撞上换行与缓存问题。
+- 分支名统一 `main`，Gitee 新建仓库默认也是 `master`，别被默认值带偏。
+- 首次推送前确认 `.gitattributes` 与 `.gitignore` 已在仓库里，否则队友一 clone 就撞上换行与缓存问题。
 
 ## 3. 授权方式三选一
 
 | 方式 | 步骤 | 优点 | 注意 |
 | --- | --- | --- | --- |
-| SSH 密钥（推荐） | 生成 ed25519 → 公钥贴到 GitHub → `ssh -T git@github.com` 验证 | 一次配置长期免密；不涉及令牌泄露 | 每台新机器各配一次 |
-| `gh` CLI | `gh auth login`，浏览器点一下 | 顺手能建仓、开 PR、看 CI | 需先安装，200MB 级依赖 |
-| HTTPS + PAT | 生成细粒度令牌（repo 权限）→ 首次 push 时粘贴 | 无需装东西 | 令牌会进凭据管理器，需定期轮换，泄露后要立刻吊销 |
+| SSH 密钥（推荐） | `ssh-keygen` 生成 → 公钥贴到 Gitee → `ssh -T git@gitee.com` 验证 | 一次配置长期免密 | 每台新机器各配一次 |
+| HTTPS + 私人令牌 | Gitee 设置 → 私人令牌 → 勾选 projects → 首次 push 时当密码填 | 不用装东西，能过公司网络 | 令牌等同密码，泄露立刻重置 |
+| 账号密码 | 首次 push 直接输入 Gitee 账号密码 | 最快 | 开了两步验证后不可用 |
 
 SSH 具体命令（PowerShell）：
 
 ```powershell
-ssh-keygen -t ed25519 -C "luna@diyface"
+ssh-keygen -t ed25519 -C "gitee@diyface"
 Get-Content "$env:USERPROFILE\.ssh\id_ed25519.pub" | Set-Clipboard
-ssh -T git@github.com
+ssh -T git@gitee.com
 ```
 
-把剪贴板内容贴到 GitHub → Settings → SSH and GPG keys → New SSH key；`ssh -T` 回一句 `Hi <用户名>! You've successfully authenticated` 即成功。若设了口令，需启动 ssh-agent：
+公钥贴到 Gitee → 设置 → SSH 公钥 → 添加公钥。返回 `Hi <用户名>! You've successfully authenticated` 即成功。若设了口令，需要启动 ssh-agent：
 
 ```powershell
 Set-Service ssh-agent -StartupType Automatic
@@ -70,12 +65,13 @@ ssh-add "$env:USERPROFILE\.ssh\id_ed25519"
 
 ## 4. 仓库设置（建完立刻做）
 
-1. **邀请成员**：Settings → Collaborators → Add people，逐个加 5 人；或建 Organization + Team 统一管理。
-2. **保护 `main`**：Settings → Branches → 要求 Pull Request、至少 1 个审批、必须通过状态检查、禁止直推。
-3. **开启 Actions**：M0 提交 CI 后，把 `pytest` 设为必需检查。
-4. **仓库信息**：写一句描述、加 Topics（`avatar` `fastapi` `pillow`），许可证按课程要求选 MIT 或不加。
+1. **加成员**：仓库 → 管理 → 仓库成员管理 → 添加成员，5 人权限选「开发者」。公开仓库不受「私有仓库最多 5 人」的限制，6 个人都能加。
+2. **保护 `main`**：管理 → 保护分支设置 → 保护 `main`，禁止直接 push、要求 PR 合并。免费版若提示受限，就靠 §6 的约定执行。
+3. **合并请求**：至少 1 人审核通过才能合并。
+4. **备份镜像**：GitHub 仓库保留，定期 `git push origin main` 同步一次；GitHub Actions 继续在镜像侧跑 CI。
+5. **仓库信息**：写一句描述，许可证按课程要求选 MIT 或留空。
 
-一个现实限制：**私有仓库的分支保护在免费计划下不可用**（公开仓库免费）。若没有付费计划，就靠约定执行「不直推 main、一律 PR」；这条已写进 §6。
+Gitee 没有 GitHub Actions，所以 CI 分两处：**本地提交钩子**（见 §6，每次 commit 自动跑测试）和 **Gitee Go**（可选，配额有限）。真正的「红灯拦截」靠本地钩子，够用。
 
 ## 5. 6 人分工（按目录归属）
 
@@ -94,11 +90,19 @@ ssh-add "$env:USERPROFILE\.ssh\id_ed25519"
 
 ## 6. 分支与提交
 
-- `main` 只接受 PR；功能分支命名 `feat/<域>-<简述>`，修复用 `fix/...`，例：`feat/render-zorder`。
+- `main` 只接受 PR（Gitee 里叫「Pull Request」）；功能分支命名 `feat/<域>-<简述>`，修复用 `fix/...`，例如 `feat/render-zorder`。
 - 一个 PR 只做一件事，控制在 400 行内；超过就拆。
-- 合并方式统一 **Squash and merge**，保持 `main` 线性历史。
+- 合并方式统一 **Squash**，保持 `main` 线性历史。
 - 提交信息用 Conventional Commits：`feat / fix / test / docs / chore(scope): 说明`。
-- 仓库根的 `AGENTS.md` 是硬约定：**每改必提、每改必测**。PR 描述里贴出实际执行的测试命令与结果，CI 未绿不合并、不交付。
+- 仓库根的 `AGENTS.md` 是硬约定：**每改必提、每改必测**。PR 描述里贴出执行的测试命令与结果。
+
+每个成员的必做一步（只需执行一次）：
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+之后每次 `git commit` 都会自动跑 `python -m pytest`，红了直接拒绝提交。这就是没有 GitHub Actions 时的门禁。
 
 ## 7. 二进制素材怎么不打架
 
@@ -108,7 +112,7 @@ Git 无法合并 PNG，所以靠规则而不是靠工具：
 - 素材成批提交：一次 PR 提交一个槽位的全部图，而不是一张一提，避免细碎历史。
 - `.gitattributes` 已把 `*.png` 标成 binary，不做换行转换、不做文本合并。
 - 当前 43 张约 4 MB，**不需要 Git LFS**；设计源文件（`.kra`、`.psd`、`.aseprite`）不进仓库，另存网盘。
-- 真冲突了：以目录 owner 的版本为准，另一方 `git rebase --onto` 或重新导出，别手工合并二进制。
+- 真冲突了：以目录 owner 的版本为准，另一方重新导出，别手工合并二进制。
 
 ## 8. 日常节奏
 
@@ -126,18 +130,21 @@ Git 无法合并 PNG，所以靠规则而不是靠工具：
 
 | 坑 | 症状 | 处理 |
 | --- | --- | --- |
-| `core.autocrlf=true` 混用 | 全文件 diff、互相覆盖 | 已用 `.gitattributes` 统一 LF；个人可 `git config core.autocrlf false` |
-| 强推覆盖 `main` | 队友提交消失 | 保护规则 + 禁止 force push；永远只强推自己的功能分支 |
-| 提交了密钥或大文件 | 仓库体积暴涨、令牌泄露 | `.gitignore` 前置；泄露立即吊销令牌；历史用 `git filter-repo` 清理 |
-| 路径大小写不一致 | macOS/Linux 下文件丢失 | 文件名一律小写，含中文的文件名尽量避免 |
-| 两人改同一文件 | 大面积冲突 | CODEOWNERS + 小 PR + 目录归属 |
+| 公开仓库未实名 | 建仓或推送被拒 | 先完成 Gitee 实名认证 |
+| 私有仓库超过 5 人 | 仓库变成只读 | 本项目用公开仓库规避；必须私有就换阿里云 Codeup |
+| SSH 22 端口不通 | `ssh -T` 超时 | 改用 HTTPS + 私人令牌 |
+| 私人令牌权限不足 | push 报 403 | 重新生成令牌，勾选 projects 权限 |
+| GitHub 时通时断 | push 失败 | 以 Gitee 为主，GitHub 有空再同步 |
+| 忘了配钩子 | 红着测试也能提交 | 重新执行 `git config core.hooksPath .githooks` |
+| `core.autocrlf=true` 混用 | 全文件 diff | 已用 `.gitattributes` 统一 LF；个人可 `git config core.autocrlf false` |
+| 两人改同一文件 | 大面积冲突 | 小 PR + 目录归属，改前在群里说 |
 | 素材对齐漂移 | 头像错位 | 改图后必须跑 `python -m diyface verify --all` 再提 PR |
 
 ## 10. 第一周检查表
 
-- [ ] 仓库已在 GitHub，6 人全部收到邀请并 clone 成功。
-- [ ] 每人 `ssh -T git@github.com` 通过（或 `gh auth status` 正常）。
+- [ ] Gitee 仓库已建、公开，6 人都被加成「开发者」。
+- [ ] 每人 `ssh -T git@gitee.com` 通过，或 HTTPS 私人令牌可用。
+- [ ] 每人都执行过 `git config core.hooksPath .githooks`，提交时会自动跑测试。
 - [ ] `main` 保护规则或「只走 PR」约定已确认。
-- [ ] CI 在首个 PR 上跑通（哪怕是 3 条冒烟测试）。
-- [ ] M0 骨架合入，所有人本地 `python -m unittest discover -s tests` 能绿。
-- [ ] 分工表已按实际意愿微调，并同步到 CODEOWNERS。
+- [ ] M0 骨架已在 Gitee 上，所有人 clone 后 `python -m pytest` 全绿。
+- [ ] 分工表按实际意愿微调，并同步到 CODEOWNERS。

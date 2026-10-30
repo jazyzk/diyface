@@ -1,0 +1,14 @@
+#!/bin/sh
+# 本地提交门禁：没有 GitHub Actions 时，用这个钩子保证「红了不让提交」。
+# 启用方式（每个成员执行一次）：git config core.hooksPath .githooks
+#
+# 只跑快测（文档、模型、接口），渲染快照等慢测交给 CI/合并前手动跑。
+
+echo "[pre-commit] 跑测试……"
+if ! python -m pytest -q -p no:cacheprovider --no-header; then
+    echo ""
+    echo "[pre-commit] 测试未通过，提交已取消。"
+    echo "修好之后再提交；确实要跳过可用 git commit --no-verify（不建议）。"
+    exit 1
+fi
+echo "[pre-commit] 通过。"
