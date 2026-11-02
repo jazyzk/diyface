@@ -26,6 +26,22 @@ PLAN = DOCS / "PLAN.md"
 COLLAB = DOCS / "COLLABORATION.md"
 HANDBOOK = DOCS / "HANDBOOK.md"
 ONBOARDING = DOCS / "ONBOARDING.md"
+BRIEF = DOCS / "AGENT-BRIEF.md"
+
+#: 交接简报必须具备的二级标题。
+BRIEF_SECTIONS = (
+    "一句话",
+    "硬约定",
+    "现状快照",
+    "怎么跑",
+    "代码地图",
+    "接口契约",
+    "数据模型要点",
+    "已经踩过的坑",
+    "下一步",
+    "PR 前的自检",
+    "对 DSH 的行为要求",
+)
 
 #: 新人上手文档必须具备的二级标题。
 ONBOARDING_SECTIONS = (
@@ -406,6 +422,50 @@ class TestOnboardingDocument(MarkdownDocChecks, unittest.TestCase):
         steps = self.text.count("**第 ")
         checks = self.text.count("✅ 验收")
         self.assertGreaterEqual(checks, steps, "有步骤没写验收标准")
+
+
+class TestAgentBrief(MarkdownDocChecks, unittest.TestCase):
+    """交接简报必须与代码保持一致，否则会误导接手的 DSH。"""
+
+    PATH = BRIEF
+    REQUIRED_SECTIONS = BRIEF_SECTIONS
+    MIN_BYTES = 4000
+
+    def test_lists_every_api_route(self) -> None:
+        from diyface.app import app
+
+        paths = {
+            route.path
+            for route in app.routes
+            if getattr(route, "path", "").startswith(("/api", "/healthz"))
+        }
+        missing = [path for path in paths if path not in self.text]
+        self.assertEqual(missing, [], f"简报漏掉了接口：{missing}")
+
+    def test_lists_every_module(self) -> None:
+        modules = sorted(
+            path.name
+            for path in (ROOT / "src" / "diyface").glob("*.py")
+            if path.name != "__init__.py"
+        )
+        missing = [name for name in modules if name not in self.text]
+        self.assertEqual(missing, [], f"简报的代码地图漏了模块：{missing}")
+
+    def test_states_current_baseline(self) -> None:
+        self.assertRegex(self.text, r"\d+ passed, 11 skipped")
+
+    def test_contains_paste_ready_prompt(self) -> None:
+        """末尾要给一段可以直接粘进对话的短版说明。"""
+        start = self.text.find("30 秒版")
+        self.assertGreaterEqual(start, 0, "缺少可直接粘贴的 30 秒版")
+        excerpt = self.text[start:]
+        for token in ("AGENTS", "pytest", "/api/render"):
+            self.assertIn(token, excerpt, f"30 秒版缺关键信息：{token}")
+
+    def test_forbids_skipping_failed_tests(self) -> None:
+        """行为要求里必须明确禁止用跳过测试的方式「变绿」。"""
+        self.assertIn("--no-verify", self.text)
+        self.assertIn("跳过", self.text)
 
 
 if __name__ == "__main__":
