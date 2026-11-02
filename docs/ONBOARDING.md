@@ -181,6 +181,7 @@ python scripts/make_placeholders.py
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -189,6 +190,7 @@ from PIL import Image
 from .models import SLOTS, Slot, SlotId
 
 CANVAS = 1024
+_ASSET_NAME = re.compile(r"[a-z0-9]+(?:_[a-z0-9]+)*")
 
 
 @dataclass(frozen=True)
@@ -206,6 +208,8 @@ def scan_slot(root: Path, slot: Slot) -> list[Asset]:
     for path in sorted(folder.glob("*.png")):
         if path.name.startswith("_"):          # 跳过参考图、缩略图
             continue
+        if not _ASSET_NAME.fullmatch(path.stem):
+            raise ValueError(f"{path.name} 文件名不合规，只允许小写字母、数字与下划线")
         with Image.open(path) as image:
             if image.size != (CANVAS, CANVAS):
                 raise ValueError(f"{path.name} 尺寸 {image.size} 应为 {CANVAS}x{CANVAS}")
@@ -222,6 +226,11 @@ def scan(root: Path) -> dict[SlotId, list[Asset]]:
         if assets:
             catalog[slot.id] = assets
     return catalog
+
+
+def index(catalog: dict[SlotId, list[Asset]]) -> dict[SlotId, dict[str, Asset]]:
+    """转成渲染器需要的「槽位 → 素材 id → 素材」两层字典。"""
+    return {slot: {asset.id: asset for asset in assets} for slot, assets in catalog.items()}
 
 
 def manifest(catalog: dict[SlotId, list[Asset]]) -> dict:
