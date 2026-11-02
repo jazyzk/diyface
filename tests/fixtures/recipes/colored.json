@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "slots": {
+    "skin": "skin_base",
+    "bangs": "bangs_straight_01",
+    "eyes": "eyes_round_01",
+    "mouth": null,
+    "glasses": null,
+    "hat": null,
+    "clothes": null,
+    "extra": null,
+    "cheeks": null,
+    "side_hair": null,
+    "brows": null,
+    "nose": null
+  },
+  "colors": {
+    "skin": "#E0AC69",
+    "bangs": "#C0392B"
+  }
+}

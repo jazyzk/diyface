@@ -358,40 +358,73 @@ def tint(layer: Image.Image, color: str, mask: Image.Image | None = None) -> Ima
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
-from .catalog import scan
-from .models import AvatarRecipe
+from .catalog import index, scan
+from .models import SLOTS, AvatarRecipe
 from .render import render
 
-
-def build_catalog(root: Path) -> dict:
-    return {slot: {asset.id: asset for asset in assets} for slot, assets in scan(root).items()}
+DEFAULT_ROOT = Path("assets")
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(prog="diyface")
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="diyface", description="分层头像生成器")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    render_cmd = sub.add_parser("render", help="按配方出图")
-    render_cmd.add_argument("recipe", type=Path)
-    render_cmd.add_argument("--out", type=Path, default=Path("out.png"))
+    render_cmd = sub.add_parser("render", help="按配方渲染 PNG")
+    render_cmd.add_argument("recipe", type=Path, help="配方 JSON 路径")
+    render_cmd.add_argument("--out", type=Path, default=Path("out.png"), help="输出路径")
     render_cmd.add_argument("--size", type=int, default=256, choices=[256, 1024])
+    render_cmd.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="素材目录")
 
-    sub.add_parser("verify", help="校验素材")
+    verify_cmd = sub.add_parser("verify", help="扫描素材并统计")
+    verify_cmd.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="素材目录")
+    verify_cmd.add_argument("--slot", choices=[slot.id.value for slot in SLOTS], default=None)
 
-    args = parser.parse_args()
-    catalog = build_catalog(Path("assets"))
+    return parser
 
-    if args.command == "render":
-        recipe = AvatarRecipe.model_validate_json(args.recipe.read_text(encoding="utf-8"))
-        args.out.write_bytes(render(recipe, catalog, args.size))
-        print(f"已生成 {args.out}")
+
+def cmd_render(args: argparse.Namespace) -> int:
+    if not args.recipe.is_file():
+        raise FileNotFoundError(f"配方不存在：{args.recipe}")
+    catalog = index(scan(args.root))
+    recipe = AvatarRecipe.model_validate_json(args.recipe.read_text(encoding="utf-8"))
+    data = render(recipe, catalog, args.size)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_bytes(data)
+    print(f"已生成 {args.out}（{args.size}×{args.size}，{len(data) / 1024:.1f} KB）")
+    return 0
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    catalog = scan(args.root)
+    total = 0
+    for slot in SLOTS:
+        if args.slot and slot.id.value != args.slot:
+            continue
+        count = len(catalog.get(slot.id, []))
+        if count:
+            print(f"{slot.folder_no:14} {slot.id.value:10} {count:3} 张")
+            total += count
+    print(f"共 {total} 张素材，{len(catalog)} 个槽位")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        return cmd_render(args) if args.command == "render" else cmd_verify(args)
+    except (FileNotFoundError, KeyError, ValueError) as exc:
+        print(f"错误：{exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
 ```
+
+把 `main()` 写成返回退出码而不是直接 `sys.exit`，是为了让测试能直接调 `main([...])` 断言返回值，不用开子进程。
 
 ✅ 验收：
 
@@ -422,10 +455,10 @@ python -m diyface render tests/fixtures/recipes/base.json --out out.png
 }
 ```
 
-再写 `tests/test_golden.py`：第一次运行生成基准图，之后比对 RMSE 是否小于 1%。
+再写 `tests/test_golden.py`：基准图放 `tests/fixtures/golden/`，第一次运行或加 `--update-golden` 时生成，之后只做比对。
 
 ```python
-"""渲染快照测试：固定配方出图，与基准图比对。"""
+"""渲染快照测试：同一份配方每次都要画出同一张图。"""
 
 from __future__ import annotations
 
@@ -435,12 +468,15 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from diyface.catalog import scan
+from diyface.catalog import index, scan
 from diyface.models import AvatarRecipe
-from diyface.render import compose
+from diyface.render import CANVAS, compose
 
 ROOT = Path(__file__).resolve().parents[1]
+RECIPES = ROOT / "tests" / "fixtures" / "recipes"
 GOLDEN = ROOT / "tests" / "fixtures" / "golden"
+REPORTS = ROOT / "tests" / "reports"
+CASES = ("base", "mono", "colored")
 THRESHOLD = 2.55          # 约等于 1% 的均方根误差
 
 
@@ -450,30 +486,43 @@ def rmse(left: Image.Image, right: Image.Image) -> float:
     return float(np.sqrt(((a - b) ** 2).mean()))
 
 
-@pytest.mark.parametrize("name", ["base"])
-def test_golden(name: str) -> None:
-    catalog = {
-        slot: {asset.id: asset for asset in assets}
-        for slot, assets in scan(ROOT / "assets").items()
-    }
+@pytest.mark.parametrize("name", CASES)
+def test_golden_matches_baseline(name: str, update_golden: bool) -> None:
+    catalog = index(scan(ROOT / "assets"))
     recipe = AvatarRecipe.model_validate_json(
-        (ROOT / "tests" / "fixtures" / "recipes" / f"{name}.json").read_text(encoding="utf-8")
+        (RECIPES / f"{name}.json").read_text(encoding="utf-8")
     )
     image = compose(recipe, catalog)
 
     GOLDEN.mkdir(parents=True, exist_ok=True)
     baseline_path = GOLDEN / f"{name}.png"
-    if not baseline_path.exists():
+    if update_golden or not baseline_path.exists():
         image.save(baseline_path)
-        pytest.skip(f"首次运行，已生成基准图 {baseline_path.name}")
+        pytest.skip(f"已生成基准图 {baseline_path.name}")
 
-    diff = rmse(image, Image.open(baseline_path).convert("RGBA"))
+    baseline = Image.open(baseline_path).convert("RGBA")
+    assert baseline.size == (CANVAS, CANVAS)
+
+    diff = rmse(image, baseline)
     if diff >= THRESHOLD:
-        image.save(GOLDEN / f"diff-{name}.png")
-    assert diff < THRESHOLD, f"{name} 与基准差异 {diff:.2f}，已输出 diff-{name}.png"
+        REPORTS.mkdir(parents=True, exist_ok=True)
+        image.save(REPORTS / f"diff-{name}.png")
+    assert diff < THRESHOLD, f"{name} 与基准差异 {diff:.2f}，见 tests/reports/diff-{name}.png"
 ```
 
-✅ 验收：第一次 `pytest` 跳过并生成基准；第二次通过；改坏一个像素会红并留下 `diff-base.png`。
+`update_golden` 夹具来自 `conftest.py` 里注册的 `--update-golden` 选项：
+
+```python
+def pytest_addoption(parser):
+    parser.addoption("--update-golden", action="store_true", default=False)
+
+
+@pytest.fixture
+def update_golden(request):
+    return bool(request.config.getoption("--update-golden"))
+```
+
+✅ 验收：第一次 `pytest` 跳过并生成 3 张基准；第二次通过；`pytest --update-golden` 可重建；改坏一个像素会红并留下 `tests/reports/diff-base.png`。
 
 **第 7 步：交接给 C（30 分钟）**
 

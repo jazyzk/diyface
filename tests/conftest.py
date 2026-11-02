@@ -1,8 +1,9 @@
 """测试公共装置。
 
-提供两类夹具：
+提供：
 * ``fake_request``：模板渲染测试用的最小 Request；
-* ``workdir``：干净的临时目录，测试结束即删除。
+* ``workdir``：干净的临时目录，测试结束即删除；
+* ``--update-golden``：重建渲染快照基准。
 """
 
 from __future__ import annotations
@@ -16,6 +17,20 @@ from starlette.requests import Request
 
 from diyface.app import app
 from tests.helpers import TMP_ROOT
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--update-golden",
+        action="store_true",
+        default=False,
+        help="按当前素材重新生成 tests/fixtures/golden 下的快照基准",
+    )
+
+
+@pytest.fixture
+def update_golden(request: pytest.FixtureRequest) -> bool:
+    return bool(request.config.getoption("--update-golden"))
 
 
 @pytest.fixture
