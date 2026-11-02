@@ -162,11 +162,13 @@ F 的测试与钩子 ───> 所有人的提交门禁（谁红了谁自己看
 
 **第 1 步：造 3 张占位素材（30 分钟）**
 
-素材组还没交图，但你不能等。先用纯 Python 生成三张全透明的 1024 画布：
+素材组还没交图，但你不能等。仓库里已备好生成脚本，跑一次就有三张带形状的占位图：
 
 ```powershell
-python -c "from PIL import Image; from pathlib import Path; [ (Path(d).mkdir(parents=True, exist_ok=True), Image.new('RGBA',(1024,1024),(0,0,0,0)).save(Path(d)/f'{n}.png')) for d,n in [('assets/01_skin','skin_base'),('assets/02_bangs','bangs_straight_01'),('assets/06_eyes','eyes_round_01')] ]"
+python scripts/make_placeholders.py
 ```
+
+三张图各自负责一个检查点：白色脸型验证「肤色相乘后不发灰」、白色发片验证「换发色时描边仍是黑」、黑眼珠验证「不可着色槽位不被染色」。都做成全透明的话，后面叠图根本看不出对错。
 
 ✅ 验收：`Get-ChildItem assets -Recurse -Filter *.png` 列出 3 个文件，用看图软件打开是 1024×1024 的透明图。
 
