@@ -15,7 +15,7 @@
 | 约定 | 说明 |
 | --- | --- |
 | 每改必提 | 每次可交付的改动都要一个 commit，粒度是「一件事」 |
-| 每改必测 | 改代码就补/改测试；交付前 `pytest` 全绿（当前基线 152 passed, 11 skipped） |
+| 每改必测 | 改代码就补/改测试；交付前 `pytest` 全绿（当前基线 178 passed, 11 skipped） |
 | 提交信息 | `feat / fix / test / docs / chore(scope): 中文说明` |
 | 分支 | 不直推 `main`，一律 PR；一个 PR 一件事，≤ 400 行 |
 | 契约 | 槽位 id、目录编号、z 序、接口字段都**不要擅自改**；要改先在本文件里讨论 |
@@ -25,7 +25,7 @@
 
 ## 3 现状快照（2026-11-02）
 
-- 20 个提交，测试 **152 passed, 11 skipped**（跳过的是 Word 任务书校验，缺 `python-docx`）。
+- 20 个提交，测试 **178 passed, 11 skipped**（跳过的是 Word 任务书校验，缺 `python-docx`）。
 - 已完成：M0 骨架、A 的 M1（占位素材 / 编目 / 渲染 / 着色 / CLI / 快照基线）、C 的接口（manifest / render / ETag 304 / random / 中文标签）。
 - 未开始：B 的前端交互、D/E 的正式素材、F 的契约与覆盖率、M5 部署、M6 上线。
 - 素材只有 3 张占位图（`skin_base`、`bangs_straight_01`、`eyes_round_01`），所以清单里只有 3 个槽位。
@@ -39,7 +39,7 @@ python -m venv .venv
 pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn jinja2 pillow pydantic pytest pytest-cov numpy httpx
 pip install -e .
 git config core.hooksPath .githooks     # 提交前自动跑测试
-python -m pytest                        # 期望 152 passed, 11 skipped
+python -m pytest                        # 期望 178 passed, 11 skipped
 python -m uvicorn diyface.app:app --reload --port 8000
 ```
 
@@ -62,7 +62,7 @@ python -m uvicorn diyface.app:app --reload --port 8000
 | `src/diyface/__main__.py` | 命令行 `render` / `verify` | 稳定 |
 | `src/diyface/templates/`、`static/` | 页面骨架 | **待 B 重做** |
 | `assets/` | 分层素材 | 3 张占位，待 D/E 交 43 张 |
-| `tests/` | 152 条测试 | 持续补充 |
+| `tests/` | 178 条测试 | 持续补充 |
 
 ## 6 接口契约（以此文件为准）
 
@@ -146,7 +146,7 @@ python -m uvicorn diyface.app:app --reload --port 8000
 ```
 项目：分层 DIY 头像生成器（FastAPI + Pillow），仓库 D:\头像diy，远端 Gitee（公开）。
 硬约定：每改必提 commit、每改必测、不直推 main、不改已定契约（槽位 id/目录编号/z 序/接口字段）。
-现状：152 passed, 11 skipped；M0 完成，A 的渲染链路与 C 的接口已完成，B 前端、D/E 素材、F 质量未完成。
+现状：178 passed, 11 skipped；M0 完成，A 的渲染链路与 C 的接口已完成，B 前端、D/E 素材、F 质量未完成。
 跑：pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn jinja2 pillow pydantic pytest numpy httpx && pip install -e .
      python -m pytest ；python -m uvicorn diyface.app:app --reload --port 8000
 接口：GET /api/manifest、POST /api/render {recipe,size}、POST /api/random {seed?}、GET /healthz、GET /assets/<file>。

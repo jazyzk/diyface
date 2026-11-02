@@ -27,6 +27,20 @@ COLLAB = DOCS / "COLLABORATION.md"
 HANDBOOK = DOCS / "HANDBOOK.md"
 ONBOARDING = DOCS / "ONBOARDING.md"
 BRIEF = DOCS / "AGENT-BRIEF.md"
+WEEK = DOCS / "WEEK-01.md"
+
+#: 周计划必须具备的二级标题。
+WEEK_SECTIONS = (
+    "一周总览",
+    "A：渲染内核",
+    "B：前端",
+    "C：接口与部署",
+    "D：素材·头部",
+    "E：素材·面部",
+    "F：质量与文档",
+    "周五验收",
+    "卡住了怎么办",
+)
 
 #: 交接简报必须具备的二级标题。
 BRIEF_SECTIONS = (
@@ -466,6 +480,44 @@ class TestAgentBrief(MarkdownDocChecks, unittest.TestCase):
         """行为要求里必须明确禁止用跳过测试的方式「变绿」。"""
         self.assertIn("--no-verify", self.text)
         self.assertIn("跳过", self.text)
+
+
+class TestWeekPlan(MarkdownDocChecks, unittest.TestCase):
+    """周计划必须覆盖六个人、每天有任务、且每步都有代码或命令。"""
+
+    PATH = WEEK
+    REQUIRED_SECTIONS = WEEK_SECTIONS
+    MIN_BYTES = 8000
+
+    def test_each_role_has_five_day_tasks(self) -> None:
+        # 只看围栏外的内容：代码块里可能有 markdown 标题，会干扰切分
+        visible = "\n".join(unfenced_lines(self.text))
+        for index, letter in enumerate("ABCDEF", start=2):
+            start = visible.find(f"## {index} {letter}")
+            self.assertGreaterEqual(start, 0, f"缺少角色 {letter} 的章节")
+            end = visible.find("\n## ", start + 4)
+            section = visible[start : end if end > 0 else len(visible)]
+            days = re.findall(r"### \d+\.\d+ (周一|周二|周三|周四|周五)", section)
+            self.assertEqual(
+                days, ["周一", "周二", "周三", "周四", "周五"], f"角色 {letter} 的每日任务不完整"
+            )
+
+    def test_plan_has_runnable_code(self) -> None:
+        fences = [line for line in self.lines if line.lstrip().startswith("```")]
+        self.assertGreaterEqual(len(fences) // 2, 20, "代码块太少，不够手把手")
+
+    def test_every_day_has_acceptance(self) -> None:
+        days = len(re.findall(r"### \d+\.\d+ (周一|周二|周三|周四|周五)", self.text))
+        checks = self.text.count("**完成标志**")
+        self.assertGreaterEqual(checks, days - 3, "多数日子应写明完成标志")
+
+    def test_mentions_handoff_commands(self) -> None:
+        for token in ("git switch -c", "python -m pytest", "python -m diyface verify", "git push"):
+            self.assertIn(token, self.text, f"周计划缺少命令：{token}")
+
+    def test_no_placeholder_numbers(self) -> None:
+        for marker in ("xxx", "XXX", "TBD", "待补"):
+            self.assertNotIn(marker, self.text, f"周计划里还有占位符：{marker}")
 
 
 if __name__ == "__main__":
