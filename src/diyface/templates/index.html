@@ -19,7 +19,7 @@
           {% for slot in slots %}
           <li>
             <span class="slot-name">{{ slot.id }}</span>
-            <span class="slot-meta">z={{ slot.z }}{% if slot.tintable %} · 可着色{% endif %}</span>
+            <span class="slot-meta">z={{ slot.z }} · {{ slot.assets | length }} 张{% if slot.tintable %} · 可着色{% endif %}</span>
           </li>
           {% endfor %}
         </ul>
@@ -27,14 +27,14 @@
 
       <section class="panel">
         <h2>下一步</h2>
-        <p>M1 会接上分层合成：配方进、PNG 出，并补上快照测试。</p>
+        <p>M1 已接入分层合成：<code>POST /api/render</code> 收配方、返回 PNG，带 ETag 与 304 缓存。</p>
         <p class="muted">版本 {{ version }}</p>
       </section>
     </main>
 
     <footer class="foot">
       <span>diyface</span>
-      <span>/healthz · /api/manifest · /api/recipe/default</span>
+      <span>/healthz · /api/manifest · /api/render · /api/recipe/default</span>
     </footer>
   </body>
 </html>

@@ -747,7 +747,7 @@ document.addEventListener("keydown", (event) => {
 
 **第 1 步：清单接上真实扫描（2 小时）**
 
-改 `app.py`：启动时扫一次目录，把 `assets/` 挂成静态目录，首页内联清单。
+改 `app.py`：把 `assets/` 挂成静态目录，首次请求时扫一次目录并缓存，首页内联清单。
 
 ```python
 from contextlib import asynccontextmanager
@@ -758,30 +758,42 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import __version__
-from .catalog import manifest as build_manifest, scan
+from .catalog import index as build_index
+from .catalog import manifest as build_manifest
+from .catalog import scan
 
 BASE_DIR = Path(__file__).parent
-ASSETS = Path("assets")
+PROJECT_ROOT = BASE_DIR.parents[1]          # 仓库根，不依赖当前工作目录
+ASSETS_DIR = PROJECT_ROOT / "assets"
 CATALOG: dict = {}
+
+
+def load_catalog() -> dict:
+    """懒加载：没有 lifespan 也能工作（测试里直接调路由就靠这个）。"""
+    global CATALOG
+    if not CATALOG:
+        CATALOG = build_index(scan(ASSETS_DIR))
+    return CATALOG
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global CATALOG
-    CATALOG = {slot: {a.id: a for a in assets} for slot, assets in scan(ASSETS).items()}
+    load_catalog()
     yield
 
 
 app = FastAPI(title="diyface", version=__version__, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
-app.mount("/assets", StaticFiles(directory=ASSETS), name="assets")
+app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
 @app.get("/api/manifest")
 def api_manifest() -> dict:
-    return build_manifest(scan(ASSETS))
+    return build_manifest(scan(ASSETS_DIR))
 ```
+
+注意别把 `index` 既当首页函数、又当 `catalog.index()`——两个名字撞上会递归到栈溢出，导入模块函数时用别名 `build_index` 区分开。
 
 ✅ 验收：`curl http://127.0.0.1:8000/api/manifest` 返回的 `slots[].assets` 不为空。
 
