@@ -9,35 +9,15 @@
 
 from __future__ import annotations
 
-import shutil
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from PIL import Image
 
 from diyface.catalog import index, manifest, scan, scan_slot
 from diyface.models import SLOTS, SlotId
+from tests.helpers import write_png
 
 ROOT = Path(__file__).resolve().parents[1]
-TMP_ROOT = ROOT / "tests" / "reports" / "tmp"
-
-
-def write_png(path: Path, size: tuple[int, int] = (1024, 1024), mode: str = "RGBA") -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    color = (255, 255, 255, 255) if mode == "RGBA" else (255, 255, 255)
-    Image.new(mode, size, color).save(path)
-
-
-@pytest.fixture
-def workdir() -> Iterator[Path]:
-    """干净的临时目录，测试结束即删除。"""
-    shutil.rmtree(TMP_ROOT, ignore_errors=True)
-    TMP_ROOT.mkdir(parents=True, exist_ok=True)
-    try:
-        yield TMP_ROOT
-    finally:
-        shutil.rmtree(TMP_ROOT, ignore_errors=True)
 
 
 @pytest.fixture

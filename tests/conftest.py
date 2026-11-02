@@ -1,15 +1,21 @@
 """测试公共装置。
 
-M0 不需要真实素材：所有测试直接调用路由函数或模型，等 M1 引入渲染管线后，
-再在这里补 ``fake_assets``（临时目录 + 占位 PNG）供渲染测试使用。
+提供两类夹具：
+* ``fake_request``：模板渲染测试用的最小 Request；
+* ``workdir``：干净的临时目录，测试结束即删除。
 """
 
 from __future__ import annotations
+
+import shutil
+from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from starlette.requests import Request
 
 from diyface.app import app
+from tests.helpers import TMP_ROOT
 
 
 @pytest.fixture
@@ -25,3 +31,14 @@ def fake_request() -> Request:
             "app": app,
         }
     )
+
+
+@pytest.fixture
+def workdir() -> Iterator[Path]:
+    """干净的临时目录，测试结束即删除。"""
+    shutil.rmtree(TMP_ROOT, ignore_errors=True)
+    TMP_ROOT.mkdir(parents=True, exist_ok=True)
+    try:
+        yield TMP_ROOT
+    finally:
+        shutil.rmtree(TMP_ROOT, ignore_errors=True)

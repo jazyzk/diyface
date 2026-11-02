@@ -302,6 +302,8 @@ def compose(recipe: AvatarRecipe, catalog: dict[SlotId, dict[str, Asset]]) -> Im
 
 
 def render(recipe: AvatarRecipe, catalog: dict[SlotId, dict[str, Asset]], size: int = 256) -> bytes:
+    if size not in (256, 1024):
+        raise ValueError(f"size 只能是 256 或 1024，收到 {size}")
     image = compose(recipe, catalog)
     if size != CANVAS:
         image = image.resize((size, size), Image.LANCZOS)
@@ -340,7 +342,8 @@ def tint(layer: Image.Image, color: str, mask: Image.Image | None = None) -> Ima
     tinted.putalpha(layer.getchannel("A"))
     if mask is None:
         return tinted
-    return Image.composite(tinted, layer, mask.getchannel("A"))
+    gray = mask if mask.mode == "L" else mask.convert("L")
+    return Image.composite(tinted, layer, gray)
 ```
 
 ✅ 验收：同一张刘海分别用 `#3B2B23` 与 `#C0392B` 出图，两次结果的描边像素完全一致。
