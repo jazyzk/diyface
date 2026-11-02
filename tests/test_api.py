@@ -120,3 +120,28 @@ def test_render_supports_both_sizes(size: int) -> None:
 
     assert response.status == 200
     assert response.body.startswith(PNG_MAGIC)
+
+
+def test_random_returns_recipe_for_all_slots() -> None:
+    response = http_client.call(app, "POST", "/api/random", json_body={})
+
+    assert response.status == 200
+    data = response.json
+    assert len(data["slots"]) == len(SLOTS) == 12
+    assert data["seed"] is not None
+
+
+def test_random_is_reproducible_with_seed() -> None:
+    first = http_client.call(app, "POST", "/api/random", json_body={"seed": 1234}).json
+    second = http_client.call(app, "POST", "/api/random", json_body={"seed": 1234}).json
+
+    assert first == second
+
+
+def test_random_recipe_can_be_rendered() -> None:
+    recipe = http_client.call(app, "POST", "/api/random", json_body={"seed": 7}).json
+
+    response = http_client.call(app, "POST", "/api/render", json_body={"recipe": recipe, "size": 256})
+
+    assert response.status == 200
+    assert response.body.startswith(PNG_MAGIC)

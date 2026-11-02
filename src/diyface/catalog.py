@@ -78,6 +78,7 @@ def manifest(catalog: dict[SlotId, list[Asset]]) -> dict:
         slots.append(
             {
                 "id": slot.id.value,
+                "label": {"zh": slot.label_zh, "en": slot.label_en},
                 "z": slot.z,
                 "tintable": slot.tintable,
                 "default_color": slot.default_color,

@@ -241,6 +241,7 @@ def manifest(catalog: dict[SlotId, list[Asset]]) -> dict:
             continue
         slots.append({
             "id": slot.id.value,
+            "label": {"zh": slot.label_zh, "en": slot.label_en},
             "z": slot.z,
             "tintable": slot.tintable,
             "default_color": slot.default_color,
@@ -596,7 +597,7 @@ function renderCategories() {
     ...state.manifest.slots.map((slot) => {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = slot.id;
+      button.textContent = slot.label.zh;
       button.addEventListener("click", () => selectSlot(slot.id));
       return button;
     })
@@ -880,20 +881,24 @@ from __future__ import annotations
 
 import random
 
-from .models import ACTIVE, AvatarRecipe
+from .models import ACTIVE, RESERVED, SLOTS, AvatarRecipe, SlotId
 
-OPTIONAL = {"glasses", "hat", "clothes", "extra"}
+#: 允许整个槽位留空（不戴眼镜、不戴帽子也不违和）。
+OPTIONAL = frozenset({SlotId.GLASSES, SlotId.HAT, SlotId.CLOTHES, SlotId.EXTRA})
+
+#: 可选槽位留空的概率。
+EMPTY_CHANCE = 0.35
 
 
-def random_recipe(catalog: dict, rng: random.Random) -> AvatarRecipe:
-    slots: dict = {}
-    colors: dict = {}
-    for slot in ACTIVE:
-        options = [asset.id for asset in catalog.get(slot.id, [])]
-        if not options:
+def random_recipe(catalog, rng: random.Random | None = None) -> AvatarRecipe:
+    rng = rng or random.Random()
+    slots, colors = {}, {}
+    for slot in SLOTS:
+        options = sorted(catalog.get(slot.id, {}))
+        if slot.id in RESERVED or not options:
             slots[slot.id] = None
             continue
-        if slot.id.value in OPTIONAL and rng.random() < 0.35:
+        if slot.id in OPTIONAL and rng.random() < EMPTY_CHANCE:
             slots[slot.id] = None
         else:
             slots[slot.id] = rng.choice(options)
@@ -901,10 +906,17 @@ def random_recipe(catalog: dict, rng: random.Random) -> AvatarRecipe:
     return AvatarRecipe(slots=slots, colors=colors, seed=rng.randrange(1_000_000))
 ```
 
+注意 `slots` 要盖满 12 个键（预留槽位填 `None`），前端拿到的配方才是完整的。
+
 ```python
+class RandomRequest(BaseModel):
+    seed: int | None = None
+
+
 @app.post("/api/random")
-def api_random() -> dict:
-    return random_recipe(CATALOG, random.Random()).model_dump(mode="json")
+def api_random(payload: RandomRequest | None = None) -> dict:
+    rng = random.Random(payload.seed if payload else None)
+    return random_recipe(load_catalog(), rng).model_dump(mode="json")
 ```
 
 ✅ 验收：连调 1000 次 `/api/random`，没有空脸、没有未知素材 id；固定 seed 时结果一致。

@@ -40,21 +40,23 @@ class Slot:
     default_color: str
     folder: str
     folder_no: str
+    label_zh: str = ""
+    label_en: str = ""
 
 
 SLOTS: tuple[Slot, ...] = (
-    Slot(SlotId.SKIN, 10, True, "#F2D5B8", "skin", "01_skin"),
-    Slot(SlotId.CHEEKS, 20, True, "#F2A6A6", "cheeks", "05_cheeks"),
-    Slot(SlotId.BANGS, 30, True, "#3B2B23", "bangs", "02_bangs"),
-    Slot(SlotId.SIDE_HAIR, 40, True, "#3B2B23", "side_hair", "03_side_hair"),
-    Slot(SlotId.BROWS, 50, True, "#3B2B23", "brows", "04_brows"),
-    Slot(SlotId.EYES, 60, False, "#2B2B2B", "eyes", "06_eyes"),
-    Slot(SlotId.NOSE, 70, True, "#E8B79A", "nose", "08_nose"),
-    Slot(SlotId.MOUTH, 80, True, "#C0504D", "mouth", "07_mouth"),
-    Slot(SlotId.GLASSES, 90, False, "#2B2B2B", "glasses", "09_glasses"),
-    Slot(SlotId.CLOTHES, 100, True, "#4A6FA5", "clothes", "11_clothes"),
-    Slot(SlotId.HAT, 110, True, "#8E5A4A", "hat", "10_hat"),
-    Slot(SlotId.EXTRA, 120, True, "#D4A017", "extra", "12_extra"),
+    Slot(SlotId.SKIN, 10, True, "#F2D5B8", "skin", "01_skin", "脸型", "Skin"),
+    Slot(SlotId.CHEEKS, 20, True, "#F2A6A6", "cheeks", "05_cheeks", "腮红", "Cheeks"),
+    Slot(SlotId.BANGS, 30, True, "#3B2B23", "bangs", "02_bangs", "发型", "Bangs"),
+    Slot(SlotId.SIDE_HAIR, 40, True, "#3B2B23", "side_hair", "03_side_hair", "鬓发", "Side hair"),
+    Slot(SlotId.BROWS, 50, True, "#3B2B23", "brows", "04_brows", "眉毛", "Brows"),
+    Slot(SlotId.EYES, 60, False, "#2B2B2B", "eyes", "06_eyes", "眼睛", "Eyes"),
+    Slot(SlotId.NOSE, 70, True, "#E8B79A", "nose", "08_nose", "鼻子", "Nose"),
+    Slot(SlotId.MOUTH, 80, True, "#C0504D", "mouth", "07_mouth", "嘴", "Mouth"),
+    Slot(SlotId.GLASSES, 90, False, "#2B2B2B", "glasses", "09_glasses", "眼镜", "Glasses"),
+    Slot(SlotId.CLOTHES, 100, True, "#4A6FA5", "clothes", "11_clothes", "衣服", "Clothes"),
+    Slot(SlotId.HAT, 110, True, "#8E5A4A", "hat", "10_hat", "帽子", "Hats"),
+    Slot(SlotId.EXTRA, 120, True, "#D4A017", "extra", "12_extra", "配饰", "Extras"),
 )
 
 SLOTS_BY_Z: tuple[Slot, ...] = tuple(sorted(SLOTS, key=lambda slot: slot.z))

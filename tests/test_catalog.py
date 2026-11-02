@@ -102,6 +102,7 @@ def test_manifest_carries_metadata_and_relative_paths(assets_root: Path) -> None
     bangs = manifest(scan(assets_root))["slots"][0]
 
     assert bangs["z"] == 30
+    assert bangs["label"] == {"zh": "发型", "en": "Bangs"}
     assert bangs["tintable"] is True
     assert bangs["default_color"] == "#3B2B23"
     assert bangs["assets"][0] == {

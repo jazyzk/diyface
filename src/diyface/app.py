@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import hashlib
+import random
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from . import __version__
 from .catalog import Asset, manifest, scan
 from .catalog import index as build_index
 from .models import ACTIVE, SLOTS, AvatarRecipe, SlotId
+from .randomizer import random_recipe
 from .render import SIZES, render
 
 BASE_DIR = Path(__file__).parent
@@ -59,6 +61,10 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 class RenderRequest(BaseModel):
     recipe: AvatarRecipe
     size: int = 256
+
+
+class RandomRequest(BaseModel):
+    seed: int | None = None
 
 
 def first_recipe(catalog: dict[SlotId, dict[str, Asset]]) -> AvatarRecipe:
@@ -100,6 +106,13 @@ def api_manifest() -> dict:
 @app.get("/api/recipe/default")
 def api_default_recipe() -> dict:
     return first_recipe(load_catalog()).model_dump(mode="json")
+
+
+@app.post("/api/random")
+def api_random(payload: RandomRequest | None = None) -> dict:
+    """返回一份合法配方；带 seed 时结果可复现。"""
+    rng = random.Random(payload.seed if payload else None)
+    return random_recipe(load_catalog(), rng).model_dump(mode="json")
 
 
 @app.post("/api/render")

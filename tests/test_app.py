@@ -30,6 +30,7 @@ def test_manifest_lists_only_slots_that_have_assets() -> None:
     for slot in data["slots"]:
         assert slot["assets"], "既然出现在清单里，就必须至少有一个素材"
         assert set(slot["assets"][0]) == {"id", "file"}
+        assert slot["label"]["zh"], "每个槽位都要有中文名，前端直接显示"
 
 
 def test_manifest_carries_default_recipe() -> None:
