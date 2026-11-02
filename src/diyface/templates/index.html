@@ -3,38 +3,98 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="分层 DIY 头像生成器：点选素材、换色、实时预览，导出 256 与 1024 透明 PNG。"
+    >
     <title>{{ title }}</title>
     <link rel="stylesheet" href="/static/style.css">
   </head>
   <body>
     <header class="masthead">
-      <h1>{{ title }}</h1>
-      <p class="tagline">M0 骨架：页面与接口已就绪，渲染器将在 M1 接入。</p>
+      <div class="masthead-text">
+        <h1>{{ title }}</h1>
+        <p class="tagline">点选图层、换色，实时合成一张可以分享的头像。</p>
+      </div>
+      <p class="version">v{{ version }}</p>
     </header>
 
-    <main class="skeleton">
-      <section class="panel">
-        <h2>启用槽位</h2>
-        <ul class="slots">
-          {% for slot in slots %}
-          <li>
-            <span class="slot-name">{{ slot.id }}</span>
-            <span class="slot-meta">z={{ slot.z }} · {{ slot.assets | length }} 张{% if slot.tintable %} · 可着色{% endif %}</span>
-          </li>
-          {% endfor %}
-        </ul>
+    <main class="layout">
+      <aside class="panel panel-picker" aria-label="类目与素材">
+        <h2 class="panel-title">类目</h2>
+        <nav id="categories" class="categories" aria-label="类目"></nav>
+
+        <div class="assets-head">
+          <h2 class="panel-title" id="assets-title">素材</h2>
+          <span id="assets-count" class="muted"></span>
+        </div>
+        <div id="assets" class="assets" role="group" aria-labelledby="assets-title">
+          <p class="muted">正在加载素材清单…</p>
+        </div>
+
+        <noscript>
+          <p class="muted">交互需要启用 JavaScript。当前可用的槽位：</p>
+          <ul class="plain-list">
+            {% for slot in slots %}
+            <li>{{ slot.label.zh }} · {{ slot.assets | length }} 张</li>
+            {% endfor %}
+          </ul>
+        </noscript>
+      </aside>
+
+      <section class="stage" aria-label="头像预览">
+        <div id="preview-card" class="preview-card">
+          <img id="preview" width="256" height="256" alt="头像预览" decoding="async">
+          <div
+            id="preview-status"
+            class="preview-status"
+            role="status"
+            aria-live="polite"
+          ></div>
+        </div>
+        <p class="stage-hint muted">
+          预览为 256×256，导出可选 256 / 1024。所有图层由 Python 在服务端合成。
+        </p>
       </section>
 
-      <section class="panel">
-        <h2>下一步</h2>
-        <p>M1 已接入分层合成：<code>POST /api/render</code> 收配方、返回 PNG，带 ETag 与 304 缓存。</p>
-        <p class="muted">版本 {{ version }}</p>
-      </section>
+      <aside class="panel controls" aria-label="颜色与操作">
+        <section class="control-group">
+          <h2 class="panel-title">颜色</h2>
+          <label class="color-row" for="color">
+            <input id="color" type="color" aria-label="取色">
+            <span id="color-value" class="color-value">#3B2B23</span>
+          </label>
+          <div id="swatches" class="swatches" role="group" aria-label="预设颜色"></div>
+          <p id="color-hint" class="muted">选择可着色的类目后即可换色。</p>
+        </section>
+
+        <section class="control-group">
+          <h2 class="panel-title">操作</h2>
+          <button id="random" type="button" class="action action-primary">随机一张</button>
+          <button type="button" class="action" data-size="256">下载 256</button>
+          <button type="button" class="action" data-size="1024">下载 1024</button>
+          <button id="share" type="button" class="action">复制分享链接</button>
+          <button id="reset" type="button" class="action action-ghost">恢复默认</button>
+        </section>
+
+        <p class="shortcuts muted">
+          快捷键：<kbd>R</kbd> 随机 · <kbd>S</kbd> 导出 1024
+        </p>
+      </aside>
     </main>
 
     <footer class="foot">
-      <span>diyface</span>
-      <span>/healthz · /api/manifest · /api/render · /api/recipe/default</span>
+      <span>diyface · 分层头像合成</span>
+      <span class="foot-links">
+        <a href="/healthz">健康检查</a>
+        <a href="/api/manifest">素材清单</a>
+      </span>
     </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    {# 首屏直接内联清单，前端不再多打一次网络请求；JSON 由 Jinja 的 tojson 安全转义。 #}
+    <script type="application/json" id="manifest-data">{{ manifest | tojson }}</script>
+    <script type="module" src="/static/app.js"></script>
   </body>
 </html>

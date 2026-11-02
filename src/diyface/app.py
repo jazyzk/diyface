@@ -93,6 +93,8 @@ def index(request: Request) -> HTMLResponse:
         {
             "title": "DIY 头像生成器",
             "slots": payload["slots"],
+            # 前端首屏直接读这份内联清单，省掉一次 /api/manifest 往返。
+            "manifest": payload,
             "version": __version__,
         },
     )

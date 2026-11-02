@@ -1,0 +1,718 @@
+/**
+ * diyface 前端交互。
+ *
+ * 设计约束：
+ * 1. 首屏素材清单由服务端内联在 #manifest-data；缺失时才回退到 /api/manifest。
+ * 2. 预览请求去抖 120ms，并带自增序号；过期响应直接丢弃，新请求会中止旧请求。
+ * 3. 任何请求都先校验 response.ok，失败只提示、不白屏。
+ * 4. 配方变更立即写入 localStorage，刷新不丢；分享链接把配方编码进 ?r=。
+ */
+
+const STORAGE_KEY = "diyface.recipe.v1";
+const PREVIEW_DEBOUNCE_MS = 120;
+const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
+
+const element = (id) => document.getElementById(id);
+
+const elements = {
+  categories: element("categories"),
+  assets: element("assets"),
+  assetsTitle: element("assets-title"),
+  assetsCount: element("assets-count"),
+  preview: element("preview"),
+  previewCard: element("preview-card"),
+  previewStatus: element("preview-status"),
+  color: element("color"),
+  colorValue: element("color-value"),
+  colorHint: element("color-hint"),
+  swatches: element("swatches"),
+  random: element("random"),
+  share: element("share"),
+  reset: element("reset"),
+  toast: element("toast"),
+};
+
+const state = {
+  manifest: null,
+  recipe: null,
+  slotId: null,
+  seq: 0,
+  debounceTimer: 0,
+  toastTimer: 0,
+  controller: null,
+  objectUrl: "",
+  randomBusy: false,
+  downloading: false,
+  previewStatusKind: "",
+};
+
+/* ------------------------------------------------------------------ */
+/* 清单与配方                                                          */
+/* ------------------------------------------------------------------ */
+
+function displayLabel(slot) {
+  return (slot.label && (slot.label.zh || slot.label.en)) || slot.id;
+}
+
+function findSlot(slotId) {
+  if (!state.manifest) return null;
+  return state.manifest.slots.find((slot) => slot.id === slotId) || null;
+}
+
+function readInlineManifest() {
+  const node = element("manifest-data");
+  if (!node) return null;
+  try {
+    return JSON.parse(node.textContent || "{}");
+  } catch (error) {
+    console.warn("内联清单解析失败", error);
+    return null;
+  }
+}
+
+async function fetchManifest() {
+  const response = await fetch("/api/manifest", {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error(`清单加载失败：HTTP ${response.status}`);
+  return response.json();
+}
+
+/**
+ * 用清单校验外来配方（localStorage / 分享链接）：
+ * - 槽位必须存在，素材必须属于该槽位；非法值回退到默认配方；
+ * - 允许显式的 null（用户主动清空），不能把 null 当成「缺失」；
+ * - 颜色必须是 #RRGGBB，缺失时回退默认色；
+ * - 只保留清单里认识的槽位，丢掉旧版本残留字段。
+ */
+function sanitizeRecipe(raw, manifest) {
+  const defaults = manifest.default_recipe || {};
+  const baseSlots = defaults.slots || {};
+  const baseColors = defaults.colors || {};
+  const candidate = raw && typeof raw === "object" ? raw : {};
+  const candidateSlots =
+    candidate.slots && typeof candidate.slots === "object" ? candidate.slots : {};
+  const candidateColors =
+    candidate.colors && typeof candidate.colors === "object" ? candidate.colors : {};
+
+  const recipe = { version: 1, slots: {}, colors: {} };
+
+  for (const [slotId, fallback] of Object.entries(baseSlots)) {
+    if (!(slotId in candidateSlots)) {
+      recipe.slots[slotId] = fallback ?? null;
+      continue;
+    }
+    const value = candidateSlots[slotId];
+    if (value === null) {
+      recipe.slots[slotId] = null;
+      continue;
+    }
+    const slot = findSlot(slotId);
+    const valid =
+      slot && typeof value === "string" && slot.assets.some((asset) => asset.id === value);
+    recipe.slots[slotId] = valid ? value : (fallback ?? null);
+  }
+
+  for (const [slotId, fallback] of Object.entries(baseColors)) {
+    const value = candidateColors[slotId];
+    recipe.colors[slotId] =
+      typeof value === "string" && HEX_COLOR.test(value) ? value.toUpperCase() : fallback;
+  }
+
+  if (Number.isInteger(candidate.seed)) recipe.seed = candidate.seed;
+  return recipe;
+}
+
+function readStoredRecipe() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.warn("读取本地配方失败", error);
+    return null;
+  }
+}
+
+function saveRecipe() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.recipe));
+  } catch (error) {
+    console.warn("保存本地配方失败", error);
+  }
+  dropShareParam();
+}
+
+function loadInitialRecipe(manifest) {
+  const shared = new URLSearchParams(location.search).get("r");
+  if (shared) {
+    const decoded = decodeRecipe(shared);
+    if (decoded) return { recipe: sanitizeRecipe(decoded, manifest), source: "share" };
+    return { recipe: sanitizeRecipe(manifest.default_recipe, manifest), source: "invalid-share" };
+  }
+
+  const stored = readStoredRecipe();
+  if (stored) return { recipe: sanitizeRecipe(stored, manifest), source: "storage" };
+  return { recipe: sanitizeRecipe(manifest.default_recipe, manifest), source: "default" };
+}
+
+function dropShareParam() {
+  const url = new URL(location.href);
+  if (!url.searchParams.has("r")) return;
+  url.searchParams.delete("r");
+  history.replaceState(null, "", url.toString());
+}
+
+function pickInitialSlot() {
+  const slots = state.manifest.slots;
+  const preferred = slots.find((slot) => slot.id === "bangs");
+  return (preferred || slots[0] || {}).id || null;
+}
+
+/* ------------------------------------------------------------------ */
+/* 类目与素材                                                          */
+/* ------------------------------------------------------------------ */
+
+function renderCategories() {
+  const buttons = state.manifest.slots.map((slot) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "category";
+    button.dataset.slotId = slot.id;
+    button.setAttribute("aria-pressed", String(slot.id === state.slotId));
+
+    const label = document.createElement("span");
+    label.textContent = displayLabel(slot);
+
+    const count = document.createElement("span");
+    count.className = "category-count";
+    count.textContent = String(slot.assets.length);
+    count.setAttribute("aria-hidden", "true");
+
+    button.append(label, count);
+    button.addEventListener("click", () => selectSlot(slot.id));
+    return button;
+  });
+  elements.categories.replaceChildren(...buttons);
+}
+
+function selectSlot(slotId) {
+  const slot = findSlot(slotId);
+  if (!slot) return;
+
+  state.slotId = slotId;
+  for (const button of elements.categories.querySelectorAll(".category")) {
+    button.setAttribute("aria-pressed", String(button.dataset.slotId === slotId));
+  }
+  renderAssets(slot);
+  syncColorControls(slot);
+}
+
+function makeAssetButton({ id, file, selected, label, none = false }) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = none ? "asset asset-none" : "asset";
+  button.dataset.assetId = id || "";
+  button.setAttribute("aria-label", label);
+  button.setAttribute("aria-pressed", String(selected));
+  button.title = label;
+
+  if (none) {
+    const mark = document.createElement("span");
+    mark.textContent = "无";
+    mark.setAttribute("aria-hidden", "true");
+    button.append(mark);
+  } else {
+    const image = document.createElement("img");
+    image.src = `/assets/${file}`;
+    image.alt = "";
+    image.loading = "lazy";
+    image.decoding = "async";
+    image.draggable = false;
+    button.append(image);
+  }
+
+  button.addEventListener("click", () => applyAsset(id));
+  return button;
+}
+
+function renderAssets(slot) {
+  const assets = slot.assets || [];
+  const selected = state.recipe.slots[slot.id];
+
+  const none = makeAssetButton({
+    id: null,
+    selected: selected === null,
+    label: `${displayLabel(slot)}：无`,
+    none: true,
+  });
+
+  const buttons = assets.map((asset) =>
+    makeAssetButton({
+      id: asset.id,
+      file: asset.file,
+      selected: selected === asset.id,
+      label: `${displayLabel(slot)}：${asset.id}`,
+    })
+  );
+
+  elements.assets.replaceChildren(none, ...buttons);
+  elements.assetsTitle.textContent = `${displayLabel(slot)}素材`;
+  elements.assetsCount.textContent = `${assets.length} 张`;
+}
+
+function applyAsset(assetId) {
+  if (!state.slotId) return;
+  state.recipe.slots[state.slotId] = assetId;
+  saveRecipe();
+  syncAssetSelection();
+  schedulePreview();
+}
+
+function syncAssetSelection() {
+  const current = state.recipe.slots[state.slotId] ?? null;
+  for (const button of elements.assets.querySelectorAll(".asset")) {
+    const assetId = button.dataset.assetId || null;
+    button.setAttribute("aria-pressed", String(assetId === current));
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 颜色                                                                */
+/* ------------------------------------------------------------------ */
+
+function buildSwatches() {
+  const colors = [];
+  for (const slot of state.manifest.slots) {
+    const color = String(slot.default_color || "").toUpperCase();
+    if (slot.tintable && HEX_COLOR.test(color) && !colors.includes(color)) {
+      colors.push(color);
+    }
+  }
+
+  const buttons = colors.slice(0, 8).map((color) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "swatch";
+    button.dataset.color = color;
+    button.style.backgroundColor = color;
+    button.setAttribute("aria-label", `使用颜色 ${color}`);
+    button.setAttribute("aria-pressed", "false");
+    button.addEventListener("click", () => applyColor(color));
+    return button;
+  });
+  elements.swatches.replaceChildren(...buttons);
+}
+
+function syncColorControls(slot) {
+  if (!slot) return;
+  const current = state.recipe.colors[slot.id] || slot.default_color || "#000000";
+  elements.color.value = (HEX_COLOR.test(current) ? current : "#000000").toLowerCase();
+  elements.colorValue.textContent = current.toUpperCase();
+  elements.color.disabled = !slot.tintable;
+  elements.colorHint.textContent = slot.tintable
+    ? `正在调整「${displayLabel(slot)}」的颜色`
+    : `「${displayLabel(slot)}」是固定素材，不支持换色`;
+
+  for (const button of elements.swatches.querySelectorAll(".swatch")) {
+    button.disabled = !slot.tintable;
+    const active = button.dataset.color === current.toUpperCase();
+    button.setAttribute("aria-pressed", String(active));
+  }
+}
+
+function applyColor(color) {
+  const slot = findSlot(state.slotId);
+  if (!slot || !slot.tintable) {
+    toast("这个类目不支持换色");
+    return;
+  }
+  state.recipe.colors[slot.id] = color.toUpperCase();
+  saveRecipe();
+  syncColorControls(slot);
+  schedulePreview();
+}
+
+function handleColorInput(event) {
+  const slot = findSlot(state.slotId);
+  if (!slot || !slot.tintable) return;
+  const color = event.target.value.toUpperCase();
+  if (!HEX_COLOR.test(color)) return;
+  state.recipe.colors[slot.id] = color;
+  saveRecipe();
+  elements.colorValue.textContent = color;
+  syncColorControls(slot);
+  schedulePreview();
+}
+
+/* ------------------------------------------------------------------ */
+/* 预览                                                                */
+/* ------------------------------------------------------------------ */
+
+function schedulePreview() {
+  clearTimeout(state.debounceTimer);
+  state.debounceTimer = window.setTimeout(refreshPreview, PREVIEW_DEBOUNCE_MS);
+}
+
+async function refreshPreview() {
+  clearTimeout(state.debounceTimer);
+  if (!state.recipe) return;
+
+  const mine = ++state.seq;
+  if (state.controller) state.controller.abort();
+  const controller = new AbortController();
+  state.controller = controller;
+  setPreviewStatus("生成中…", "loading");
+
+  try {
+    const response = await fetch("/api/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "image/png" },
+      body: JSON.stringify({ recipe: state.recipe, size: 256 }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(await describeError(response));
+
+    const blob = await response.blob();
+    if (mine !== state.seq) return;
+
+    const url = URL.createObjectURL(blob);
+    await preloadImage(url);
+    if (mine !== state.seq) {
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    elements.preview.src = url;
+    if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
+    state.objectUrl = url;
+    setPreviewStatus("", "");
+  } catch (error) {
+    if (error && error.name === "AbortError") return;
+    if (mine !== state.seq) return;
+    console.error("预览失败", error);
+    setPreviewStatus("预览失败，点这里重试", "error");
+  }
+}
+
+function preloadImage(url) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(true);
+    image.onerror = () => resolve(false);
+    image.src = url;
+  });
+}
+
+function setPreviewStatus(text, kind) {
+  elements.previewStatus.textContent = text;
+  elements.previewStatus.dataset.kind = kind || "";
+  elements.previewStatus.classList.toggle("is-visible", Boolean(text));
+  elements.previewStatus.classList.toggle("is-error", kind === "error");
+  elements.previewCard.classList.toggle("is-loading", kind === "loading");
+  state.previewStatusKind = kind || "";
+}
+
+async function describeError(response) {
+  try {
+    const data = await response.json();
+    if (data && data.error) {
+      return `${data.error.code || "ERROR"}：${data.error.message || response.status}`;
+    }
+  } catch (error) {
+    // 响应不是 JSON 时退回状态码。
+  }
+  return `HTTP ${response.status}`;
+}
+
+/* ------------------------------------------------------------------ */
+/* 随机、导出、分享                                                    */
+/* ------------------------------------------------------------------ */
+
+async function randomize() {
+  if (state.randomBusy) return;
+  state.randomBusy = true;
+  elements.random.disabled = true;
+
+  try {
+    const response = await fetch("/api/random", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (!response.ok) throw new Error(await describeError(response));
+
+    const raw = await response.json();
+    state.recipe = sanitizeRecipe(raw, state.manifest);
+    saveRecipe();
+    renderAssets(findSlot(state.slotId));
+    syncColorControls(findSlot(state.slotId));
+    replayPop();
+    refreshPreview();
+    toast("已随机生成一张脸");
+  } catch (error) {
+    console.error("随机失败", error);
+    toast("随机失败，请稍后重试", "error");
+  } finally {
+    state.randomBusy = false;
+    elements.random.disabled = false;
+  }
+}
+
+function replayPop() {
+  elements.previewCard.classList.remove("is-popping");
+  void elements.previewCard.offsetWidth;
+  elements.previewCard.classList.add("is-popping");
+  window.setTimeout(() => elements.previewCard.classList.remove("is-popping"), 360);
+}
+
+function timestamp(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+  const day = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
+  const time = `${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+  return `${day}-${time}`;
+}
+
+async function download(size) {
+  if (state.downloading) return;
+  state.downloading = true;
+
+  try {
+    const response = await fetch("/api/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "image/png" },
+      body: JSON.stringify({ recipe: state.recipe, size }),
+    });
+    if (!response.ok) throw new Error(await describeError(response));
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `avatar-${timestamp()}.png`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(`已导出 ${size}×${size} PNG`);
+  } catch (error) {
+    console.error("导出失败", error);
+    toast("导出失败，请稍后重试", "error");
+  } finally {
+    state.downloading = false;
+  }
+}
+
+function encodeRecipe(recipe) {
+  const json = JSON.stringify(recipe);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function decodeRecipe(token) {
+  try {
+    const base64 = token.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch (error) {
+    console.warn("分享链接解析失败", error);
+    return null;
+  }
+}
+
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.top = "0";
+  area.style.opacity = "0";
+  document.body.append(area);
+  area.select();
+  const copied = document.execCommand("copy");
+  area.remove();
+  if (!copied) throw new Error("copy command failed");
+}
+
+async function shareLink() {
+  const url = new URL(location.href);
+  url.searchParams.set("r", encodeRecipe(state.recipe));
+  url.hash = "";
+  history.replaceState(null, "", url.toString());
+
+  try {
+    await copyText(url.toString());
+    toast("分享链接已复制，打开即可复现这张脸");
+  } catch (error) {
+    console.warn("复制失败", error);
+    window.prompt("复制这条分享链接：", url.toString());
+  }
+}
+
+function resetRecipe() {
+  state.recipe = sanitizeRecipe(state.manifest.default_recipe, state.manifest);
+  saveRecipe();
+  selectSlot(state.slotId);
+  refreshPreview();
+  toast("已恢复默认配方");
+}
+
+/* ------------------------------------------------------------------ */
+/* 键盘与提示                                                          */
+/* ------------------------------------------------------------------ */
+
+function handleGlobalKeydown(event) {
+  if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+
+  const target = event.target;
+  if (
+    target instanceof HTMLElement &&
+    (target.matches("input, textarea, select") || target.isContentEditable)
+  ) {
+    return;
+  }
+
+  const key = event.key.toLowerCase();
+  if (key === "r") {
+    event.preventDefault();
+    randomize();
+  } else if (key === "s") {
+    event.preventDefault();
+    download(1024);
+  }
+}
+
+function handleAssetKeydown(event) {
+  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+
+  const buttons = Array.from(elements.assets.querySelectorAll("button.asset"));
+  const current = document.activeElement;
+  const index = buttons.indexOf(current);
+  if (index < 0) return;
+
+  event.preventDefault();
+  const rect = current.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const horizontal = event.key === "ArrowLeft" || event.key === "ArrowRight";
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const button of buttons) {
+    if (button === current) continue;
+    const other = button.getBoundingClientRect();
+    if (!other.width || !other.height) continue;
+
+    const ox = other.left + other.width / 2;
+    const oy = other.top + other.height / 2;
+    let primary = 0;
+    let secondary = 0;
+
+    if (horizontal) {
+      if (event.key === "ArrowLeft" && ox >= cx - 1) continue;
+      if (event.key === "ArrowRight" && ox <= cx + 1) continue;
+      primary = Math.abs(ox - cx);
+      secondary = Math.abs(oy - cy);
+    } else {
+      if (event.key === "ArrowUp" && oy >= cy - 1) continue;
+      if (event.key === "ArrowDown" && oy <= cy + 1) continue;
+      primary = Math.abs(oy - cy);
+      secondary = Math.abs(ox - cx);
+    }
+
+    const score = primary + secondary * 0.6;
+    if (score < bestScore) {
+      bestScore = score;
+      best = button;
+    }
+  }
+
+  if (best) best.focus();
+}
+
+function toast(message, kind = "info") {
+  clearTimeout(state.toastTimer);
+  elements.toast.textContent = message;
+  elements.toast.dataset.kind = kind;
+  elements.toast.hidden = false;
+  state.toastTimer = window.setTimeout(() => {
+    elements.toast.hidden = true;
+  }, 2400);
+}
+
+function fatal(error) {
+  console.error("初始化失败", error);
+  elements.categories.replaceChildren();
+  elements.assetsTitle.textContent = "加载失败";
+  elements.assetsCount.textContent = "";
+  const message = document.createElement("p");
+  message.className = "fatal";
+  message.textContent = "素材清单加载失败，请刷新页面重试。";
+  elements.assets.replaceChildren(message);
+  setPreviewStatus("无法加载素材清单", "error");
+  for (const control of document.querySelectorAll(".action, input[type=color]")) {
+    control.disabled = true;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 启动                                                                */
+/* ------------------------------------------------------------------ */
+
+function wireEvents() {
+  elements.color.addEventListener("input", handleColorInput);
+  elements.random.addEventListener("click", randomize);
+  elements.share.addEventListener("click", shareLink);
+  elements.reset.addEventListener("click", resetRecipe);
+  elements.assets.addEventListener("keydown", handleAssetKeydown);
+  elements.previewStatus.addEventListener("click", () => {
+    if (state.previewStatusKind === "error") refreshPreview();
+  });
+  document.addEventListener("keydown", handleGlobalKeydown);
+
+  for (const button of document.querySelectorAll("[data-size]")) {
+    button.addEventListener("click", () => download(Number(button.dataset.size)));
+  }
+}
+
+async function boot() {
+  try {
+    state.manifest = readInlineManifest() || (await fetchManifest());
+    if (!state.manifest || !Array.isArray(state.manifest.slots) || !state.manifest.slots.length) {
+      throw new Error("素材清单为空");
+    }
+
+    const initial = loadInitialRecipe(state.manifest);
+    state.recipe = initial.recipe;
+    state.slotId = pickInitialSlot();
+    if (!state.slotId) throw new Error("没有可用槽位");
+
+    buildSwatches();
+    renderCategories();
+    selectSlot(state.slotId);
+    wireEvents();
+    await refreshPreview();
+
+    if (initial.source === "share") {
+      toast("已载入分享的配方");
+    } else if (initial.source === "storage") {
+      toast("已恢复上次的配方");
+    } else if (initial.source === "invalid-share") {
+      toast("分享链接无效，已使用默认配方", "error");
+    }
+  } catch (error) {
+    fatal(error);
+  }
+}
+
+boot();
