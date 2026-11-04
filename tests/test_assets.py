@@ -19,10 +19,18 @@ ALLOWED_CHARS = set("abcdefghijklmnopqrstuvwxyz0123456789_")
 
 
 def asset_files() -> list[Path]:
-    """assets/ 下所有参与渲染的 PNG（下划线开头的参考图、缩略图不算）。"""
+    """assets/ 下所有参与渲染的 PNG。
+
+    排除三类：`_thumb/` 里的缩略图、下划线开头的参考图、`*_tint.png` 蒙版。
+    """
     if not ASSETS.is_dir():
         return []
-    return sorted(path for path in ASSETS.rglob("*.png") if not path.name.startswith("_"))
+    return sorted(
+        path
+        for path in ASSETS.rglob("*.png")
+        if not any(part.startswith("_") for part in path.relative_to(ASSETS).parts)
+        and not path.name.endswith("_tint.png")
+    )
 
 
 def test_assets_directory_exists() -> None:

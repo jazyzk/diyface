@@ -18,6 +18,8 @@ from pathlib import Path
 from .catalog import index, scan
 from .models import SLOTS, AvatarRecipe
 from .render import render
+from .thumbs import build_thumbs, stale_thumbs
+from .validate import validate_asset
 
 DEFAULT_ROOT = Path("assets")
 
@@ -41,6 +43,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="只检查指定槽位",
     )
 
+    thumbs_cmd = sub.add_parser("build-thumbs", help="生成 256 缩略图")
+    thumbs_cmd.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="素材目录")
+    thumbs_cmd.add_argument(
+        "--slot",
+        choices=[slot.id.value for slot in SLOTS],
+        default=None,
+        help="只处理指定槽位",
+    )
+    thumbs_cmd.add_argument(
+        "--check",
+        action="store_true",
+        help="只检查是否过期，不写文件；过期时退出码为 1",
+    )
+
     return parser
 
 
@@ -59,16 +75,44 @@ def cmd_render(args: argparse.Namespace) -> int:
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
-    catalog = scan(args.root)
+    try:
+        catalog = scan(args.root)
+    except ValueError as exc:
+        # 扫描阶段就会拦下尺寸/模式/命名问题，把文件名与原因直接抛给作者
+        print(f"FAIL {exc}")
+        print("检查中断：目录里有不合法的文件，先修掉再跑")
+        return 1
+
     total = 0
+    failures = 0
+
     for slot in SLOTS:
         if args.slot and slot.id.value != args.slot:
             continue
-        count = len(catalog.get(slot.id, []))
-        if count:
-            print(f"{slot.folder_no:14} {slot.id.value:10} {count:3} 张")
-            total += count
-    print(f"共 {total} 张素材，{len(catalog)} 个槽位")
+        assets = catalog.get(slot.id, [])
+        if not assets:
+            continue
+        print(f"{slot.folder_no:14} {slot.id.value:10} {len(assets):3} 张")
+        for asset in assets:
+            total += 1
+            for problem in validate_asset(asset.path, tintable=slot.tintable):
+                print(f"FAIL {asset.path}  {problem}")
+                failures += 1
+
+    print(f"检查 {total} 张素材，问题 {failures} 个")
+    return 1 if failures else 0
+
+
+def cmd_build_thumbs(args: argparse.Namespace) -> int:
+    if args.check:
+        stale = stale_thumbs(args.root, args.slot)
+        for path in stale:
+            print(f"过期 {path}")
+        print(f"过期 {len(stale)} 张")
+        return 1 if stale else 0
+
+    count = build_thumbs(args.root, args.slot)
+    print(f"已生成 {count} 张缩略图")
     return 0
 
 
@@ -77,6 +121,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "render":
             return cmd_render(args)
+        if args.command == "build-thumbs":
+            return cmd_build_thumbs(args)
         return cmd_verify(args)
     except (FileNotFoundError, KeyError, ValueError) as exc:
         print(f"错误：{exc}", file=sys.stderr)

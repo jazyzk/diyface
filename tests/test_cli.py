@@ -79,7 +79,21 @@ def test_verify_lists_slots(capsys: pytest.CaptureFixture[str]) -> None:
     assert code == 0
     output = capsys.readouterr().out
     assert "bangs" in output
-    assert "共 3 张素材" in output
+    assert "检查 3 张素材，问题 0 个" in output
+
+
+def test_verify_fails_on_bad_asset(workdir: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """一张 512 的图必须让 verify 以退出码 1 结束，并打印 FAIL 行。"""
+    bad = workdir / "02_bangs" / "bangs_bad_01.png"
+    bad.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGBA", (512, 512), (255, 255, 255, 255)).save(bad)
+
+    code = main(["verify", "--root", str(workdir)])
+
+    assert code == 1
+    output = capsys.readouterr().out
+    assert "FAIL" in output
+    assert "尺寸" in output
 
 
 def test_render_rejects_bad_size(workdir: Path) -> None:

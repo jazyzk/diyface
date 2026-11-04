@@ -49,6 +49,51 @@ git switch -c feat/<你的字母>-w1
 2. **一次提交只做一件事**，提交信息写清做了什么。
 3. **不要改别人负责的文件**（分工见 §3 每节标题下的「你的文件」）。
 
+### 1.4 每天同步环境（PowerShell 版）
+
+**每天开工前、每次 `git pull` 之后、每次合完别人的 PR 之后，都按这个顺序做一遍。**
+不做同步就去改代码，最常见的后果是：改的是旧版本、提交时冲突一堆、跑出来的测试和队友对不上。
+
+```powershell
+cd D:\头像diy
+
+# 1) 先回主分支拿最新代码
+git switch main
+git fetch gitee
+git pull --rebase
+
+# 2) 回到自己的分支，并把 main 的新提交垫到自己下面
+git switch feat/<你的字母>-w1
+git rebase main
+
+# 3) 激活虚拟环境：提示符前面出现 (.venv) 才算成功
+.venv\Scripts\Activate.ps1
+
+# 4) 依赖有变化时才需要（见下面判断方法）
+pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -e ".[dev]"
+
+# 5) 别人交了新素材时才需要
+python -m diyface build-thumbs
+
+# 6) 跑测试，确认环境是干净的
+python -m pytest
+```
+
+**怎么判断要不要做第 4 步**：看第 1 步 `git pull` 的输出里有没有出现 `pyproject.toml`。有就装，没有就跳过（装一次要几十秒，没必要天天装）。
+
+**怎么判断要不要做第 5 步**：看 `git pull` 的输出里有没有 `assets/` 下的 `.png`。有就重建，没有就跳过。
+
+**收工前再跑一遍第 3、6 步**，确保你提交的代码在干净环境里也是绿的。
+
+| 现象 | 原因 | 处理 |
+| --- | --- | --- |
+| 提示符前没有 `(.venv)` | 虚拟环境没激活 | 重新跑 `.venv\Scripts\Activate.ps1` |
+| `No module named diyface` | 没装成本地包 | `pip install -e ".[dev]"` |
+| `No module named pytest` | 装到了别的解释器 | 先激活 `.venv`，再 `pip install pytest` |
+| 改了代码页面没变 | uvicorn 没开 `--reload`，或浏览器缓存 | 重启服务，`Ctrl + F5` 硬刷新 |
+| 素材图 404 | 缩略图没生成 | `python -m diyface build-thumbs` |
+| 测试数量和群里对不上 | 没 `git pull`，或没 rebase main | 回到 §1.4 第 1、2 步重做 |
+
 ---
 
 ## 2 A：渲染内核 —— 把「能出图」升级成「能自检」
@@ -139,7 +184,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
 python -m diyface verify
 ```
 
-现在应该报一堆「缺少 _tint.png」——因为占位图没有蒙版。**这是对的**，说明规则生效了。
+占位图已经带蒙版，所以应该看到 `问题 0 个`。想确认规则真的会拦人，临时删掉一张蒙版的副本再跑，或直接跑 `pytest tests/test_validate.py`。
 
 **提交**：`feat(verify): 抽出素材校验规则，补体积与 tint 检查`
 
@@ -319,7 +364,7 @@ if __name__ == "__main__":
     main()
 ```
 
-**完成标志**：跑出两行数字，记进 PR 描述（M5 优化时对比用）。
+**完成标志**：跑出两行数字，记进 PR 描述（M5 优化时对比用）。当前基线（3 层占位素材）：256 px 中位约 35 ms，1024 px 约 44 ms；素材到 43 张后会变慢，届时以新数字为准。
 
 **提交**：`chore(bench): 加渲染耗时基线脚本`
 
@@ -1139,3 +1184,25 @@ git push gitee v0.2
 | 接口 500 | 看 uvicorn 终端的堆栈 | 把堆栈贴给 C |
 
 **每天收工前必做**：提交、push、群里报一句「今天完成了 X，卡在 Y」。
+
+---
+
+## 10 收工前 5 分钟（每天一次）
+
+```powershell
+cd D:\头像diy
+git status                        # 1) 有没有漏提交的文件
+git add -p                        # 2) 挑要提交的改动
+git commit -m "feat(ui): 预览去抖与取色"
+git push                          # 3) 推到自己的分支
+```
+
+然后做一遍环境同步（§1.4），最后确认这四件事：
+
+- [ ] `git status` 里没有意外文件（`.venv`、`tests/reports/`、别人交的素材）。
+- [ ] 激活 `.venv` 后 `python -m pytest` 全绿。
+- [ ] `git push` 成功，分支在 Gitee 上能看到今天的新提交。
+- [ ] 群里报了一句：今天完成什么、卡在哪、明天先做什么。
+
+周五收工时多一步：把本周的提交整理成一条 PR（`feat/<你的字母>-w1` → `main`），
+按 §8 的清单自检，然后 @ 一个人来审。

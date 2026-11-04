@@ -70,6 +70,7 @@ docs/             计划书、协作指南、实施手册、实验任务书
 
 - [新人上手与分工执行方案](docs/ONBOARDING.md)
 - [第 1 周任务清单（手把手）](docs/WEEK-01.md)
+- [各角色任务说明（喂给 DSH）](docs/briefs/c-api-deploy.md)
 - [给 DSH 的项目交接简报](docs/AGENT-BRIEF.md)
 - [实施计划书](docs/PLAN.md)
 - [六人分工实施手册](docs/HANDBOOK.md)

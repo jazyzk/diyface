@@ -71,6 +71,10 @@ TARGETS: dict[str, "object"] = {
     "06_eyes/eyes_round_01.png": draw_eyes,
 }
 
+#: 可着色槽位需要一张同名 _tint 蒙版（全白表示整层都可上色）。
+#: eyes 在 models 里是 tintable=False，不需要蒙版。
+TINTABLE = {"01_skin/skin_base.png", "02_bangs/bangs_straight_01.png"}
+
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1] / "assets"
@@ -80,6 +84,11 @@ def main() -> None:
         factory().save(path)
         size_kb = path.stat().st_size / 1024
         print(f"已生成 assets/{relative}  ({size_kb:.1f} KB)")
+
+        if relative in TINTABLE:
+            mask = path.with_name(f"{path.stem}_tint.png")
+            Image.new("RGBA", (CANVAS, CANVAS), (255, 255, 255, 255)).save(mask)
+            print(f"已生成 assets/{relative.replace(path.name, mask.name)}  (蒙版)")
 
 
 if __name__ == "__main__":

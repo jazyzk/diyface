@@ -111,6 +111,16 @@ def test_manifest_carries_metadata_and_relative_paths(assets_root: Path) -> None
     }
 
 
+def test_scan_skips_tint_masks(assets_root: Path) -> None:
+    """`*_tint.png` 是蒙版，不是可以叠的素材。"""
+    write_png(assets_root / "02_bangs" / "bangs_straight_01_tint.png")
+
+    ids = [asset.id for asset in scan(assets_root)[SlotId.BANGS]]
+
+    assert "bangs_straight_01_tint" not in ids
+    assert len(ids) == 2
+
+
 def test_real_assets_directory_is_scannable() -> None:
     """仓库里现有的素材必须能直接被扫出来（当前是 3 张占位图）。"""
     catalog = scan(ROOT / "assets")

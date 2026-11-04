@@ -519,6 +519,64 @@ class TestWeekPlan(MarkdownDocChecks, unittest.TestCase):
         for marker in ("xxx", "XXX", "TBD", "待补"):
             self.assertNotIn(marker, self.text, f"周计划里还有占位符：{marker}")
 
+    def test_has_daily_env_sync_section(self) -> None:
+        """新手最容易漏的就是「拉完代码没同步环境」，必须单独成一节。"""
+        for token in ("每天同步环境", "git pull --rebase", "git rebase main", "Activate.ps1"):
+            self.assertIn(token, self.text, f"缺少环境同步内容：{token}")
+
+    def test_has_end_of_day_checklist(self) -> None:
+        self.assertIn("收工前 5 分钟", self.text)
+        for token in ("git status", "git push", "python -m pytest"):
+            start = self.text.find("收工前 5 分钟")
+            self.assertIn(token, self.text[start:], f"收工清单缺少：{token}")
+
+
+#: 角色简报：字母 -> (文件, 必须出现的关键内容)
+ROLE_BRIEFS = {
+    "C": (
+        DOCS / "briefs" / "c-api-deploy.md",
+        ("cache.py", "Dockerfile", "scripts/check.ps1", "feat/c-w1"),
+    ),
+    "D": (
+        DOCS / "briefs" / "d-assets-head.md",
+        ("assets/02_bangs", "assets/06_eyes", "make_guide.py", "feat/d-w1"),
+    ),
+    "E": (
+        DOCS / "briefs" / "e-assets-face.md",
+        ("assets/01_skin", "assets/07_mouth", "assets/09_glasses", "feat/e-w1"),
+    ),
+    "F": (
+        DOCS / "briefs" / "f-quality.md",
+        ("pyproject.toml", "CHANGELOG.md", "覆盖率", "feat/f-w1"),
+    ),
+}
+
+
+class TestRoleBriefs(unittest.TestCase):
+    """给 C/D/E/F 的 DSH 简报必须自成一体：能直接粘进对话就开工。"""
+
+    def test_each_brief_is_self_contained(self) -> None:
+        for letter, (path, tokens) in ROLE_BRIEFS.items():
+            self.assertTrue(path.is_file(), f"{path} 不存在")
+            text = read_text(path)
+
+            for section in ("你是谁", "你的文件", "本周任务", "不要做", "卡住了找谁"):
+                self.assertIn(section, text, f"{path.name} 缺少小节：{section}")
+            for token in tokens:
+                self.assertIn(token, text, f"{path.name} 缺少关键内容：{token}")
+
+            self.assertIn("python -m pytest", text, f"{path.name} 没写测试命令")
+            self.assertIn("WEEK-01.md", text, f"{path.name} 没指向环境同步章节")
+
+    def test_briefs_have_no_placeholders(self) -> None:
+        for path, _ in ROLE_BRIEFS.values():
+            hits = PLACEHOLDER_PATTERN.findall(read_text(path))
+            self.assertEqual(hits, [], f"{path.name} 还有占位符：{hits}")
+
+    def test_briefs_forbid_direct_push(self) -> None:
+        for path, _ in ROLE_BRIEFS.values():
+            self.assertIn("不直推", read_text(path), f"{path.name} 没写「不直推 main」")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

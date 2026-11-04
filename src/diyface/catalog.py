@@ -40,8 +40,8 @@ def scan_slot(root: Path, slot: Slot) -> list[Asset]:
 
     assets: list[Asset] = []
     for path in sorted(folder.glob("*.png")):
-        if path.name.startswith("_"):          # 参考图、缩略图不参与渲染
-            continue
+        if path.name.startswith("_") or path.name.endswith("_tint.png"):
+            continue                          # 参考图、缩略图、tint 蒙版都不算素材
         if not _ASSET_NAME.fullmatch(path.stem):
             raise ValueError(f"{path.name} 文件名不合规，只允许小写字母、数字与下划线")
         with Image.open(path) as image:
