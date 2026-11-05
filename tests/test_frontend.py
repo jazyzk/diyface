@@ -54,7 +54,9 @@ def test_index_inlines_manifest_that_matches_api() -> None:
 
     assert inline == api
     assert inline["schema"] == 1
-    assert [slot["id"] for slot in inline["slots"]] == ["skin", "bangs", "eyes"]
+    ids = [slot["id"] for slot in inline["slots"]]
+    assert {"skin", "bangs", "eyes"} <= set(ids)
+    assert [slot["z"] for slot in inline["slots"]] == sorted(slot["z"] for slot in inline["slots"])
     assert inline["default_recipe"]["slots"]["skin"] == "skin_base"
 
 

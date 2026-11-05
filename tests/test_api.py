@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import pytest
 
+from pathlib import Path
+
 from diyface.app import app
+from diyface.catalog import scan
 from diyface.models import SLOTS
 from tests import http_client
 
@@ -95,7 +98,8 @@ def test_healthz_over_http() -> None:
 
     assert response.status == 200
     assert response.json["ok"] is True
-    assert response.json["assets"] == 3
+    expected = sum(len(assets) for assets in scan(Path("assets")).values())
+    assert response.json["assets"] == expected
 
 
 def test_static_asset_is_served() -> None:

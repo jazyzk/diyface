@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -79,7 +80,7 @@ def test_verify_lists_slots(capsys: pytest.CaptureFixture[str]) -> None:
     assert code == 0
     output = capsys.readouterr().out
     assert "bangs" in output
-    assert "检查 3 张素材，问题 0 个" in output
+    assert re.search(r"检查 \d+ 张素材，问题 0 个", output), output
 
 
 def test_verify_fails_on_bad_asset(workdir: Path, capsys: pytest.CaptureFixture[str]) -> None:

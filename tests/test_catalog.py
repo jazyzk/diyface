@@ -122,8 +122,8 @@ def test_scan_skips_tint_masks(assets_root: Path) -> None:
 
 
 def test_real_assets_directory_is_scannable() -> None:
-    """仓库里现有的素材必须能直接被扫出来（当前是 3 张占位图）。"""
+    """仓库里现有的素材必须能直接被扫出来。"""
     catalog = scan(ROOT / "assets")
 
-    assert set(catalog) == {SlotId.SKIN, SlotId.BANGS, SlotId.EYES}
-    assert sum(len(assets) for assets in catalog.values()) == 3
+    assert {SlotId.SKIN, SlotId.BANGS, SlotId.EYES} <= set(catalog)
+    assert sum(len(assets) for assets in catalog.values()) >= 3

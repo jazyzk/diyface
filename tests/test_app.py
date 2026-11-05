@@ -8,7 +8,8 @@ from __future__ import annotations
 import pytest
 
 from diyface import __version__
-from diyface.app import api_default_recipe, api_manifest, app, healthz, index
+from diyface.app import ASSETS_DIR, api_default_recipe, api_manifest, app, healthz, index
+from diyface.catalog import scan as scan_assets
 from diyface.models import ACTIVE, SLOTS
 
 
@@ -26,7 +27,8 @@ def test_manifest_lists_only_slots_that_have_assets() -> None:
     assert data["schema"] == 1
     assert z_values == sorted(z_values), "清单必须按 z 升序"
     assert set(ids) <= {slot.id.value for slot in ACTIVE}
-    assert ids == ["skin", "bangs", "eyes"], "当前仓库里只有这三个槽位有素材"
+    assert {"skin", "bangs", "eyes"} <= set(ids), "至少这三个槽位必须有素材"
+    assert ids == [slot.id.value for slot in ACTIVE if slot.id.value in ids]
     for slot in data["slots"]:
         assert slot["assets"], "既然出现在清单里，就必须至少有一个素材"
         assert set(slot["assets"][0]) == {"id", "file"}
@@ -46,7 +48,8 @@ def test_default_recipe_endpoint_picks_first_asset() -> None:
 
     assert data["slots"]["skin"] == "skin_base"
     assert data["slots"]["bangs"] == "bangs_straight_01"
-    assert data["slots"]["mouth"] is None, "没有素材的槽位保持为空"
+    assert data["slots"]["mouth"] is not None, "嘴已经有素材了，默认配方应当选中一张"
+    assert data["slots"]["hat"] is None, "还没有素材的槽位保持为空"
 
 
 def test_healthz_reports_counts() -> None:
@@ -54,8 +57,9 @@ def test_healthz_reports_counts() -> None:
 
     assert data["ok"] is True
     assert data["version"] == __version__
-    assert data["slots"] == 3
-    assert data["assets"] == 3
+    catalog = scan_assets(ASSETS_DIR)
+    assert data["slots"] == len(catalog)
+    assert data["assets"] == sum(len(assets) for assets in catalog.values())
 
 
 def test_index_renders_page_with_slot_list(fake_request) -> None:
