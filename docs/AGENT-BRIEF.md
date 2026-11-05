@@ -61,6 +61,7 @@ python -m uvicorn diyface.app:app --reload --port 8000
 | `src/diyface/validate.py` | 素材校验规则：体积、透明区、tint 蒙版配对 | 新增 |
 | `src/diyface/thumbs.py` | 生成 256 缩略图、检查过期 | 新增 |
 | `src/diyface/bench.py` | 渲染耗时测量（M5 对比基线） | 新增 |
+| `src/diyface/guide.py` | 生成画素材用的参考线图 | 新增 |
 | `src/diyface/app.py` | 路由与错误结构 | 稳定 |
 | `src/diyface/__main__.py` | 命令行 `render` / `verify` | 稳定 |
 | `src/diyface/templates/`、`static/` | 页面骨架 | **待 B 重做** |
