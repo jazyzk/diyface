@@ -40,7 +40,7 @@
 
 | 角色 | 要改什么 |
 | --- | --- |
-| 素材（P1） | 按新目录与新基线画；示例文件名见各目录 README 或 `docs/briefs/` |
+| 素材（P1） | 按新目录与新基线画；示例文件名见 `docs/PLAN.md` §6 与 `docs/WEEK-01.md` |
 | 渲染（P2） | 无代码改动，`models.SLOTS` 已是新表；确认 `verify` 与快照仍绿 |
 | 前端（P3） | 类目仍从 manifest 读，不写死；把「发型」文案改成「前发/后发」 |
 | 后端（P4） | 启动命令改为 `python -m flask --app diyface.app run`；新增 `/api/analyze`、`/api/works` |
@@ -81,5 +81,5 @@ python -m flask --app diyface.app run --debug --port 8000
 | 6 套预设模板 | P3 | 未开始 |
 | 54 张正式素材 | P1 | 现有 16 张（占位 3 + 面部 13） |
 
-旧的 A–F 分工文档（`docs/ONBOARDING.md`、`docs/WEEK-01.md`、`docs/HANDBOOK.md`）描述的是迁移前的
-六人分工，仍可作为「怎么做」的教程参考，但**角色归属与素材数量以本文与 docx 为准**。
+`docs/ONBOARDING.md`、`docs/WEEK-01.md`、`docs/COLLABORATION.md` 已按 P1–P6 重写；
+角色归属与素材数量以 `docs/PLAN.md` 与 docx 为准。

@@ -26,3 +26,14 @@ Thumbs.db
 # 本地配置与密钥
 .env
 .env.*
+
+# 数据与本地库（CelebA 子集、SQLite）
+data/
+*.db
+*.sqlite3
+
+# 设计源文件（只提交导出的 PNG）
+*.kra
+*.psd
+*.aseprite
+*.ai

@@ -70,9 +70,9 @@ python scripts/import_pack.py --src D:\导出\lorelei --dry-run
 
 ```
 可导入 3 张，跳过 1 张
-  Eyes 2.png            -> 06_eyes/eyes_2.png
-  Glasses Round.png     -> 09_glasses/glasses_round.png
-  Hair 1.png            -> 02_bangs/bangs_hair_1.png
+  Eyes 2.png            -> 05_eyes/eyes_2.png
+  Glasses Round.png     -> 08_glasses/glasses_round.png
+  Hair 1.png            -> 04_hair/hair_1.png
   跳过 whatever.png     文件名里认不出槽位（可加 --slot 指定）
 ```
 

@@ -95,7 +95,7 @@ src/diyface/            应用代码（app.py 路由、models.py 槽位与配方
 src/diyface/templates/  Jinja2 模板（三栏首页）
 src/diyface/static/     样式与脚本（app.js、style.css）
 assets/                 分层素材（10 个槽位目录，_thumb/ 放缩略图）
-tests/                  测试（285 passed, 11 skipped）
+tests/                  测试（265 passed, 11 skipped）
 docs/                   计划书、协作指南、任务说明、迁移说明
 ```
 
@@ -105,9 +105,8 @@ docs/                   计划书、协作指南、任务说明、迁移说明
 - [实施计划书](docs/PLAN.md)
 - [新人上手与分工执行方案](docs/ONBOARDING.md)
 - [第 1 周任务清单（手把手）](docs/WEEK-01.md)
-- [各角色任务说明（喂给 DSH）](docs/briefs/c-api-deploy.md)
 - [换美术风格：Figma 导出与导入](docs/ASSET-IMPORT.md)
+- [每周任务清单（D1–D7）](docs/WEEK-01.md)
 - [给 DSH 的项目交接简报](docs/AGENT-BRIEF.md)
-- [六人分工实施手册](docs/HANDBOOK.md)
 - [协作与 Gitee 托管指南](docs/COLLABORATION.md)
 - [实验任务书](docs/DIY头像生成器-实验任务书.docx)
