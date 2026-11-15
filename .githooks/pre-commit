@@ -4,6 +4,12 @@
 #
 # 只跑快测（文档、模型、接口），渲染快照等慢测交给 CI/合并前手动跑。
 
+echo "[pre-commit] 校验素材……"
+if ! python -m diyface verify; then
+    echo "[pre-commit] 素材校验未通过，提交已取消。"
+    exit 1
+fi
+
 echo "[pre-commit] 跑测试……"
 if ! python -m pytest -q -p no:cacheprovider --no-header; then
     echo ""
