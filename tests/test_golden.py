@@ -68,5 +68,5 @@ def test_recipe_fixture_is_valid(name: str) -> None:
     """快照用的配方本身必须是合法配方（12 个槽位、颜色格式正确）。"""
     recipe = load_recipe(name)
 
-    assert len(recipe.slots) == 12
+    assert len(recipe.slots) == 10
     assert recipe.slots["skin"] is not None

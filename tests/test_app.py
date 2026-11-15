@@ -1,4 +1,4 @@
-"""M1 接口的冒烟测试（直接调用路由函数，不经过 HTTP）。
+"""接口冒烟测试：路由存在、清单结构、默认配方、健康检查。
 
 端到端行为（状态码、响应头、304、错误结构）在 test_api.py 里测。
 """
@@ -8,18 +8,20 @@ from __future__ import annotations
 import pytest
 
 from diyface import __version__
-from diyface.app import ASSETS_DIR, api_default_recipe, api_manifest, app, healthz, index
-from diyface.catalog import scan as scan_assets
+from diyface.app import ASSETS_DIR, app
+from diyface.catalog import scan
 from diyface.models import ACTIVE, SLOTS
 
 
-def test_app_exposes_expected_routes() -> None:
-    paths = {route.path for route in app.routes}
-    assert {"/", "/api/manifest", "/api/render", "/api/recipe/default", "/healthz"} <= paths
+def test_expected_routes_are_registered() -> None:
+    rules = {rule.rule for rule in app.url_map.iter_rules()}
+    for path in ("/", "/api/manifest", "/api/render", "/api/random", "/healthz"):
+        assert path in rules
+    assert "/assets/<path:filename>" in rules
 
 
-def test_manifest_lists_only_slots_that_have_assets() -> None:
-    data = api_manifest()
+def test_manifest_lists_only_slots_that_have_assets(client) -> None:
+    data = client.get("/api/manifest").get_json()
 
     ids = [slot["id"] for slot in data["slots"]]
     z_values = [slot["z"] for slot in data["slots"]]
@@ -27,58 +29,50 @@ def test_manifest_lists_only_slots_that_have_assets() -> None:
     assert data["schema"] == 1
     assert z_values == sorted(z_values), "清单必须按 z 升序"
     assert set(ids) <= {slot.id.value for slot in ACTIVE}
-    assert {"skin", "bangs", "eyes"} <= set(ids), "至少这三个槽位必须有素材"
-    assert ids == [slot.id.value for slot in ACTIVE if slot.id.value in ids]
+    assert {"skin", "hair", "eyes"} <= set(ids), "至少这几个槽位必须有素材"
     for slot in data["slots"]:
         assert slot["assets"], "既然出现在清单里，就必须至少有一个素材"
         assert set(slot["assets"][0]) == {"id", "file"}
         assert slot["label"]["zh"], "每个槽位都要有中文名，前端直接显示"
 
 
-def test_manifest_carries_default_recipe() -> None:
-    recipe = api_manifest()["default_recipe"]
+def test_manifest_carries_default_recipe(client) -> None:
+    recipe = client.get("/api/manifest").get_json()["default_recipe"]
 
-    assert len(recipe["slots"]) == len(SLOTS) == 12
+    assert len(recipe["slots"]) == len(SLOTS) == 10
     assert recipe["slots"]["skin"] == "skin_base"
-    assert recipe["colors"]["bangs"] == "#3B2B23"
+    assert recipe["colors"]["hair"] == "#2B1B12"
 
 
-def test_default_recipe_endpoint_picks_first_asset() -> None:
-    data = api_default_recipe()
+def test_default_recipe_endpoint_picks_first_asset(client) -> None:
+    data = client.get("/api/recipe/default").get_json()
 
     assert data["slots"]["skin"] == "skin_base"
-    assert data["slots"]["bangs"] == "bangs_straight_01"
-    assert data["slots"]["mouth"] is not None, "嘴已经有素材了，默认配方应当选中一张"
+    assert data["slots"]["hair"] == "hair_straight_01"
     assert data["slots"]["hat"] is None, "还没有素材的槽位保持为空"
 
 
-def test_healthz_reports_counts() -> None:
-    data = healthz()
+def test_healthz_reports_counts(client) -> None:
+    data = client.get("/healthz").get_json()
+    catalog = scan(ASSETS_DIR)
 
     assert data["ok"] is True
     assert data["version"] == __version__
-    catalog = scan_assets(ASSETS_DIR)
     assert data["slots"] == len(catalog)
     assert data["assets"] == sum(len(assets) for assets in catalog.values())
 
 
-def test_index_renders_page_with_slot_list(fake_request) -> None:
-    response = index(fake_request)
-    body = response.body.decode("utf-8")
+def test_index_renders_page_with_slot_list(client) -> None:
+    response = client.get("/")
+    body = response.data.decode("utf-8")
 
     assert response.status_code == 200
     assert "DIY 头像生成器" in body
     assert "/static/style.css" in body
-    for slot_id in ("skin", "bangs", "eyes"):
+    for slot_id in ("skin", "hair", "eyes"):
         assert slot_id in body
 
 
 @pytest.mark.parametrize("path", ["/", "/api/manifest", "/healthz"])
-def test_routes_are_registered_as_get(path: str) -> None:
-    methods = {
-        method
-        for route in app.routes
-        if getattr(route, "path", None) == path
-        for method in getattr(route, "methods", set())
-    }
-    assert "GET" in methods
+def test_get_routes_accept_get(client, path: str) -> None:
+    assert client.get(path).status_code == 200

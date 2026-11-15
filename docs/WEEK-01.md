@@ -132,7 +132,7 @@ def validate_asset(path: Path, *, tintable: bool = True) -> list[str]:
         problems.append("文件名只允许小写字母、数字与下划线")
 
     if path.stat().st_size > MAX_BYTES:
-        problems.append(f"体积 {path.stat().st_size // 1024}KB 超过 120KB")
+        problems.append(f"体积 {path.stat().st_size // 1024}KB 超过 80KB")
 
     try:
         with Image.open(path) as image:
@@ -364,7 +364,7 @@ if __name__ == "__main__":
     main()
 ```
 
-**完成标志**：跑出两行数字，记进 PR 描述（M5 优化时对比用）。当前基线（3 层占位素材）：256 px 中位约 35 ms，1024 px 约 44 ms；素材到 43 张后会变慢，届时以新数字为准。
+**完成标志**：跑出两行数字，记进 PR 描述（M5 优化时对比用）。当前基线（3 层占位素材）：256 px 中位约 35 ms，1024 px 约 44 ms；素材到 54 张后会变慢，届时以新数字为准。
 
 **提交**：`chore(bench): 加渲染耗时基线脚本`
 
@@ -813,7 +813,7 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 COPY pyproject.toml README.md ./
-RUN pip install --no-cache-dir fastapi uvicorn jinja2 pillow pydantic
+RUN pip install --no-cache-dir flask uvicorn jinja2 pillow pydantic
 
 COPY src ./src
 COPY assets ./assets

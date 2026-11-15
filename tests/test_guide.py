@@ -16,7 +16,7 @@ def test_guide_is_1024_transparent_canvas(workdir: Path) -> None:
     with Image.open(path) as image:
         assert image.size == (CANVAS, CANVAS)
         assert image.mode == "RGBA"
-        assert image.getpixel((300, 620))[3] == 0, "空白处必须透明"
+        assert image.getpixel((300, 300))[3] == 0, "空白处必须透明"
 
 
 def test_guide_draws_all_three_reference_lines(workdir: Path) -> None:
@@ -24,8 +24,8 @@ def test_guide_draws_all_three_reference_lines(workdir: Path) -> None:
 
     with Image.open(path) as image:
         assert image.getpixel((512, 100))[3] > 0, "缺垂直中线"
-        assert image.getpixel((100, 448))[3] > 0, "缺脸中心线"
-        assert image.getpixel((100, 256))[3] > 0, "缺头顶基线"
+        assert image.getpixel((100, 500))[3] > 0, "缺脸中心线"
+        assert image.getpixel((100, 170))[3] > 0, "缺头顶基线"
 
 
 def test_guide_can_ghost_a_reference(workdir: Path) -> None:

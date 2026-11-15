@@ -67,4 +67,4 @@ def test_slot_folders_are_numbered() -> None:
     if not ASSETS.is_dir():
         pytest.skip("assets/ 不存在")
     for folder in sorted(path for path in ASSETS.iterdir() if path.is_dir()):
-        assert folder.name[:2].isdigit(), f"{folder.name} 应以两位编号开头，例如 02_bangs"
+        assert folder.name[:2].isdigit(), f"{folder.name} 应以两位编号开头，例如 04_hair"

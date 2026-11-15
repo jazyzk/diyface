@@ -54,9 +54,7 @@ def test_render_supports_1024(workdir: Path) -> None:
 def test_render_fails_on_unknown_asset(workdir: Path, capsys: pytest.CaptureFixture[str]) -> None:
     recipe = write_recipe(
         workdir / "bad.json",
-        {"skin": "skin_base", "bangs": "bangs_not_exist", "eyes": None, "mouth": None,
-         "glasses": None, "hat": None, "clothes": None, "extra": None,
-         "cheeks": None, "side_hair": None, "brows": None, "nose": None},
+        {"skin": "skin_base", "hair": "hair_not_exist"},
     )
     out = workdir / "never.png"
 
@@ -79,13 +77,13 @@ def test_verify_lists_slots(capsys: pytest.CaptureFixture[str]) -> None:
 
     assert code == 0
     output = capsys.readouterr().out
-    assert "bangs" in output
+    assert "hair" in output
     assert re.search(r"检查 \d+ 张素材，问题 0 个", output), output
 
 
 def test_verify_fails_on_bad_asset(workdir: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """一张 512 的图必须让 verify 以退出码 1 结束，并打印 FAIL 行。"""
-    bad = workdir / "02_bangs" / "bangs_bad_01.png"
+    bad = workdir / "04_hair" / "bangs_bad_01.png"
     bad.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGBA", (512, 512), (255, 255, 255, 255)).save(bad)
 

@@ -1,21 +1,19 @@
 {
   "version": 1,
   "slots": {
-    "skin": "skin_base",
-    "bangs": "bangs_straight_01",
+    "skin": "skin_slim",
+    "clothes": null,
+    "hair_back": null,
+    "hair": "hair_straight_01",
     "eyes": "eyes_round_01",
+    "brows": null,
     "mouth": null,
     "glasses": null,
     "hat": null,
-    "clothes": null,
-    "extra": null,
-    "cheeks": null,
-    "side_hair": null,
-    "brows": null,
-    "nose": null
+    "extra": null
   },
   "colors": {
-    "skin": "#E0AC69",
-    "bangs": "#C0392B"
+    "skin": "#C68B59",
+    "hair": "#C0392B"
   }
 }

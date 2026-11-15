@@ -89,7 +89,7 @@ python scripts/import_pack.py --src D:\导出\lorelei
 ```powershell
 python -m diyface verify
 python -m diyface build-thumbs --check
-python -m uvicorn diyface.app:app --reload --port 8000
+python -m flask --app diyface.app run --debug --port 8000
 ```
 
 浏览器里逐个类目点一遍：**位置比数量重要**——一张偏 20 像素的刘海，会让整张脸看起来歪。

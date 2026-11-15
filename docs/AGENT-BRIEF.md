@@ -36,11 +36,11 @@
 cd D:\头像diy
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn jinja2 pillow pydantic pytest pytest-cov numpy httpx
+pip install -i https://pypi.tuna.tsinghua.edu.cn/simple flask uvicorn jinja2 pillow pydantic pytest pytest-cov numpy httpx
 pip install -e .
 git config core.hooksPath .githooks     # 提交前自动跑测试
 python -m pytest                        # 期望 178 passed, 11 skipped
-python -m uvicorn diyface.app:app --reload --port 8000
+python -m flask --app diyface.app run --debug --port 8000
 ```
 
 要点：
@@ -53,7 +53,7 @@ python -m uvicorn diyface.app:app --reload --port 8000
 
 | 文件 | 职责 | 状态 |
 | --- | --- | --- |
-| `src/diyface/models.py` | 12 槽位、z 序、配方模型与校验 | 稳定，别动常量 |
+| `src/diyface/models.py` | 10 槽位、z 序、配方模型与校验 | 稳定，别动常量 |
 | `src/diyface/catalog.py` | 扫 `assets/` 生成清单、校验素材规格 | 稳定 |
 | `src/diyface/palettes.py` | 颜色解析、相乘着色、tint 蒙版 | 稳定 |
 | `src/diyface/render.py` | 按 z 序合成、多尺寸 PNG | 稳定 |
@@ -66,7 +66,7 @@ python -m uvicorn diyface.app:app --reload --port 8000
 | `src/diyface/app.py` | 路由与错误结构 | 稳定 |
 | `src/diyface/__main__.py` | 命令行 `render` / `verify` | 稳定 |
 | `src/diyface/templates/`、`static/` | 页面骨架 | **待 B 重做** |
-| `assets/` | 分层素材 | 3 张占位，待 D/E 交 43 张 |
+| `assets/` | 分层素材 | 3 张占位，待 D/E 交 54 张 |
 | `tests/` | 178 条测试 | 持续补充 |
 
 ## 6 接口契约（以此文件为准）
@@ -77,7 +77,7 @@ python -m uvicorn diyface.app:app --reload --port 8000
 | GET | `/api/manifest` | — | `{schema, slots[], default_recipe}` |
 | GET | `/api/recipe/default` | — | 配方 |
 | POST | `/api/render` | `{recipe, size}` | `image/png` + `ETag` + `Cache-Control`，命中返回 304 |
-| POST | `/api/random` | `{seed?}` | 配方（12 个槽位键） |
+| POST | `/api/random` | `{seed?}` | 配方（10 个槽位键） |
 | GET | `/healthz` | — | `{ok, version, slots, assets}` |
 | GET | `/assets/<目录>/<文件>` | — | 素材原图，可当缩略图 |
 
@@ -100,7 +100,7 @@ python -m uvicorn diyface.app:app --reload --port 8000
 
 ## 7 数据模型要点（最容易理解错的四条）
 
-1. **12 个槽位、8 个启用**：`cheeks / side_hair / brows / nose` 只保留枚举与 z 序，不出素材；配方里这 4 个键固定为 `null`。
+1. **10 个槽位、8 个启用**：`cheeks / side_hair / brows / nose` 只保留枚举与 z 序，不出素材；配方里这 4 个键固定为 `null`。
 2. **z 序是唯一真源**：只写在 `models.SLOTS`，渲染、清单、前端都读它。改顺序 = 改文档 + 改测试，不允许各处各写一份。
 3. **白色打底 + 相乘着色**：素材的可着色区域必须画成白色，渲染时乘目标色。直接用深色画发丝，换色后会发灰甚至变黑。
 4. **manifest 只输出有素材的槽位**：现在只有 3 个；D/E 交图后自动出现，前端不要写死类目数量。
@@ -149,12 +149,12 @@ python -m uvicorn diyface.app:app --reload --port 8000
 ## 附：30 秒版（直接粘给 DSH 的对话开头）
 
 ```
-项目：分层 DIY 头像生成器（FastAPI + Pillow），仓库 D:\头像diy，远端 Gitee（公开）。
+项目：分层 DIY 头像生成器（Flask + Pillow），仓库 D:\头像diy，远端 Gitee（公开）。
 硬约定：每改必提 commit、每改必测、不直推 main、不改已定契约（槽位 id/目录编号/z 序/接口字段）。
 现状：178 passed, 11 skipped；M0 完成，A 的渲染链路与 C 的接口已完成，B 前端、D/E 素材、F 质量未完成。
-跑：pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn jinja2 pillow pydantic pytest numpy httpx && pip install -e .
-     python -m pytest ；python -m uvicorn diyface.app:app --reload --port 8000
+跑：pip install -i https://pypi.tuna.tsinghua.edu.cn/simple flask uvicorn jinja2 pillow pydantic pytest numpy httpx && pip install -e .
+     python -m pytest ；python -m flask --app diyface.app run --debug --port 8000
 接口：GET /api/manifest、POST /api/render {recipe,size}、POST /api/random {seed?}、GET /healthz、GET /assets/<file>。
-要点：12 槽位 8 启用；z 序只在 models.SLOTS；素材白色打底靠相乘着色；manifest 只输出有素材的槽位。
+要点：10 槽位 8 启用；z 序只在 models.SLOTS；素材白色打底靠相乘着色；manifest 只输出有素材的槽位。
 先读：AGENTS.md 与 docs/AGENT-BRIEF.md，再读 docs/ONBOARDING.md 里你负责的那一节。
 ```

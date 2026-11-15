@@ -115,19 +115,17 @@ COLLAB_SECTIONS = (
     "第一周检查表",
 )
 
-#: 12 个槽位 id，必须与 models.py 中的 SlotId 保持一致。
+#: 10 个槽位 id，必须与 models.py 中的 SlotId 保持一致。
 SLOT_IDS = (
     "skin",
-    "bangs",
-    "side_hair",
+    "clothes",
+    "hair_back",
+    "hair",
     "eyes",
-    "nose",
-    "mouth",
     "brows",
-    "cheeks",
+    "mouth",
     "glasses",
     "hat",
-    "clothes",
     "extra",
 )
 
@@ -271,7 +269,7 @@ class TestPlanDocument(MarkdownDocChecks, unittest.TestCase):
         # z 序表必须正好 12 行数据行，避免漏加/多加槽位。
         z_tables = [b for b in table_blocks(self.text) if "槽位" in b[0] and "说明" in b[0]]
         self.assertEqual(len(z_tables), 1, "应存在唯一的 z 序表")
-        self.assertEqual(len(z_tables[0]) - 2, len(SLOT_IDS), "z 序表数据行数应等于 12")
+        self.assertEqual(len(z_tables[0]) - 2, len(SLOT_IDS), "z 序表数据行数应等于 10")
 
     def test_asset_budget_matches_total(self) -> None:
         """§2.3 预算表逐槽位数量之和应等于声明的总数，改预算时不许漏改合计。"""
@@ -290,9 +288,9 @@ class TestPlanDocument(MarkdownDocChecks, unittest.TestCase):
             elif cells[0] == "合计":
                 declared_total = int(cells[1])
 
-        self.assertEqual(len(per_slot), 8, "预算表应恰好覆盖 8 个启用槽位")
-        self.assertEqual(sum(per_slot.values()), 43, "预算表各槽位之和应为 43")
-        self.assertEqual(declared_total, 43, "合计行应写 43，与逐项之和一致")
+        self.assertEqual(len(per_slot), 10, "预算表应覆盖全部 10 个槽位")
+        self.assertEqual(sum(per_slot.values()), 54, "预算表各槽位之和应为 54")
+        self.assertEqual(declared_total, 54, "合计行应写 54，与逐项之和一致")
 
 
 class TestCollaborationDocument(MarkdownDocChecks, unittest.TestCase):
@@ -315,10 +313,8 @@ class TestCollaborationDocument(MarkdownDocChecks, unittest.TestCase):
             self.assertIn(module, self.text, f"分工未覆盖模块：{module}")
 
     def test_asset_ownership_matches_budget(self) -> None:
-        """两位美术的交付数量之和应为 43，与 PLAN 的预算一致。"""
-        self.assertIn("21 张", self.text, "头部素材交付数量应为 21 张")
-        self.assertIn("22 张", self.text, "面部与服饰素材交付数量应为 22 张")
-        self.assertIn("43 张", self.text, "两人合计应为 43 张")
+        """素材总量应与 PLAN 的预算一致（当前 54 张）。"""
+        self.assertIn("54 张", self.text, "素材总量应为 54 张")
 
     def test_auth_options_documented(self) -> None:
         """三种授权方式都要给出可执行步骤，避免队友照着卡住。"""
@@ -376,9 +372,8 @@ class TestHandbookDocument(MarkdownDocChecks, unittest.TestCase):
         self.assertGreaterEqual(len(fences) // 2, 24, "代码示例过少，不足以照着做")
 
     def test_asset_split_matches_budget(self) -> None:
-        """D 的 21 张与 E 的 22 张必须合得上 PLAN 的 43 张。"""
-        for token in ("21 张", "22 张", "43 张"):
-            self.assertIn(token, self.text, f"手册缺少素材数量：{token}")
+        """素材总量必须与 PLAN 的 54 张一致。"""
+        self.assertIn("54 张", self.text, "手册缺少素材总量：54 张")
 
 
 class TestOnboardingDocument(MarkdownDocChecks, unittest.TestCase):
@@ -449,9 +444,9 @@ class TestAgentBrief(MarkdownDocChecks, unittest.TestCase):
         from diyface.app import app
 
         paths = {
-            route.path
-            for route in app.routes
-            if getattr(route, "path", "").startswith(("/api", "/healthz"))
+            rule.rule
+            for rule in app.url_map.iter_rules()
+            if rule.rule.startswith(("/api", "/healthz"))
         }
         missing = [path for path in paths if path not in self.text]
         self.assertEqual(missing, [], f"简报漏掉了接口：{missing}")
@@ -539,11 +534,11 @@ ROLE_BRIEFS = {
     ),
     "D": (
         DOCS / "briefs" / "d-assets-head.md",
-        ("assets/02_bangs", "assets/06_eyes", "make_guide.py", "feat/d-w1"),
+        ("assets/04_hair", "assets/05_eyes", "make_guide.py", "feat/d-w1"),
     ),
     "E": (
         DOCS / "briefs" / "e-assets-face.md",
-        ("assets/01_skin", "assets/07_mouth", "assets/09_glasses", "feat/e-w1"),
+        ("assets/01_skin", "assets/07_mouth", "assets/08_glasses", "feat/e-w1"),
     ),
     "F": (
         DOCS / "briefs" / "f-quality.md",

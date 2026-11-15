@@ -20,11 +20,15 @@ def build_catalog(workdir: Path) -> dict:
     """每类造 2 张素材，确保随机有得选。"""
     layout = {
         "01_skin": ["skin_base", "skin_slim"],
-        "02_bangs": ["bangs_straight_01", "bangs_wavy_01"],
-        "06_eyes": ["eyes_round_01", "eyes_star_01"],
+        "02_clothes": ["clothes_crew_01", "clothes_shirt_01"],
+        "03_hair_back": ["hair_back_long_01", "hair_back_short_01"],
+        "04_hair": ["hair_straight_01", "hair_wavy_01"],
+        "05_eyes": ["eyes_round_01", "eyes_star_01"],
+        "06_brows": ["brows_soft_01", "brows_sharp_01"],
         "07_mouth": ["mouth_smile_01", "mouth_laugh_01"],
-        "09_glasses": ["glasses_round_01", "glasses_sun_01"],
-        "10_hat": ["hat_beret_01", "hat_cap_01"],
+        "08_glasses": ["glasses_round_01", "glasses_sun_01"],
+        "09_hat": ["hat_beret_01", "hat_cap_01"],
+        "10_extra": ["extra_earring_01", "extra_star_01"],
         "11_clothes": ["clothes_crew_01", "clothes_hoodie_01"],
         "12_extra": ["extra_earring_01", "extra_star_01"],
     }

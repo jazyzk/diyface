@@ -34,7 +34,7 @@ git clone https://gitee.com/chords-of-fate/diyface.git
 cd diyface
 python -m venv .venv
 .venv\Scripts\activate
-pip install fastapi uvicorn jinja2 pillow pydantic pytest pytest-cov numpy
+pip install flask uvicorn jinja2 pillow pydantic pytest pytest-cov numpy
 ```
 
 macOS 只需把激活那行换成 `source .venv/bin/activate`。
@@ -42,7 +42,7 @@ macOS 只需把激活那行换成 `source .venv/bin/activate`。
 ### 1.2 三步跑通仓库
 
 ```powershell
-python -m uvicorn diyface.app:app --reload --port 8000
+python -m flask --app diyface.app run --debug --port 8000
 python -m pytest -q
 python -m diyface verify --all
 ```
@@ -87,7 +87,7 @@ python -m diyface verify --all
 | 10_hat | hat | 110 | 启用 | D |
 | 12_extra | extra | 120 | 启用 | E |
 
-素材总量：D 负责头部 21 张，E 负责面部与服饰 22 张，合计 43 张。
+素材总量：D 负责头部 21 张，E 负责面部与服饰 22 张，合计 54 张。
 
 **素材命名**：`<槽位>_<形状>_<两位序号>.png`，例如 `bangs_straight_01.png`，只允许小写字母、数字与下划线。
 
@@ -142,7 +142,7 @@ git push -u origin feat/a-render-core
 
 | 交付物 | 验收 |
 | --- | --- |
-| `models.py` | 12 个槽位、z 序唯一、配方校验 |
+| `models.py` | 10 个槽位、z 序唯一、配方校验 |
 | `catalog.py` | 扫目录生成清单、尺寸与模式校验 |
 | `render.py` | 按 z 序合成、空槽位透明、多尺寸导出 |
 | `palettes.py` | 颜色相乘、tint 蒙版、非法颜色报错 |
@@ -446,7 +446,7 @@ if __name__ == "__main__":
 
 ### 2.7 自检清单
 
-- [ ] 12 个槽位、z 序与我这份表完全一致（改一处就要同步改文档）。
+- [ ] 10 个槽位、z 序与我这份表完全一致（改一处就要同步改文档）。
 - [ ] 空槽位不画，且不影响其他层。
 - [ ] 未知素材 id 抛 `KeyError`，接口层会转成 422。
 - [ ] 尺寸只接受 256 与 1024，其他值报错。
@@ -635,10 +635,10 @@ function shareLink() {
 import hashlib
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from flask import Flask, HTTPException, Request, Response
+from flask.responses import HTMLResponse
+from flask.staticfiles import StaticFiles
+from flask.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from .catalog import scan, manifest
@@ -646,7 +646,7 @@ from .models import AvatarRecipe, default_recipe
 from .render import render
 from .randomizer import random_recipe
 
-app = FastAPI(title="diyface")
+app = Flask(title="diyface")
 app.mount("/static", StaticFiles(directory="src/diyface/static"), name="static")
 templates = Jinja2Templates(directory="src/diyface/templates")
 
@@ -748,7 +748,7 @@ FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir fastapi uvicorn jinja2 pillow pydantic
+RUN pip install --no-cache-dir flask uvicorn jinja2 pillow pydantic
 COPY src ./src
 COPY assets ./assets
 EXPOSE 8000
@@ -1072,12 +1072,12 @@ def test_golden_default_avatar(golden, catalog):
 
 ### 7.5 第 4 步：素材校验脚本（约 3 小时）
 
-`scripts/verify_assets.py` 检查六件事：文件存在、1024 见方、RGBA、命名合规、体积小于 120KB、可着色素材有对应 `_tint.png`。
+`scripts/verify_assets.py` 检查六件事：文件存在、1024 见方、RGBA、命名合规、体积小于 80KB、可着色素材有对应 `_tint.png`。
 
 输出要能直接看出是哪个文件哪条规则不过：
 
 ```
-FAIL assets/02_bangs/bangs_wavy_01.png  体积 158KB 超过 120KB
+FAIL assets/02_bangs/bangs_wavy_01.png  体积 158KB 超过 80KB
 FAIL assets/06_eyes/eyes_star_01.png   缺少 _tint.png
 ```
 
@@ -1121,7 +1121,7 @@ CI 的步骤顺序固定：装依赖、跑快测、跑素材校验、跑快照�
 
 | 目的 | 命令 |
 | --- | --- |
-| 起服务 | `python -m uvicorn diyface.app:app --reload --port 8000` |
+| 起服务 | `python -m flask --app diyface.app run --debug --port 8000` |
 | 跑测试 | `python -m pytest -q` |
 | 只看失败 | `python -m pytest -q -x` |
 | 覆盖率 | `python -m pytest --cov=src/diyface --cov-report=term-missing` |

@@ -1,8 +1,8 @@
 """测试公共装置。
 
 提供：
-* ``fake_request``：模板渲染测试用的最小 Request；
 * ``workdir``：干净的临时目录，测试结束即删除；
+* ``client``：Flask 测试客户端；
 * ``--update-golden``：重建渲染快照基准。
 """
 
@@ -13,7 +13,6 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from starlette.requests import Request
 
 from diyface.app import app
 from tests.helpers import TMP_ROOT
@@ -34,18 +33,11 @@ def update_golden(request: pytest.FixtureRequest) -> bool:
 
 
 @pytest.fixture
-def fake_request() -> Request:
-    """最小可用的 Request，供模板渲染测试使用。"""
-    return Request(
-        {
-            "type": "http",
-            "method": "GET",
-            "path": "/",
-            "headers": [],
-            "query_string": b"",
-            "app": app,
-        }
-    )
+def client():
+    """Flask 测试客户端。"""
+    app.config.update(TESTING=True)
+    with app.test_client() as test_client:
+        yield test_client
 
 
 @pytest.fixture

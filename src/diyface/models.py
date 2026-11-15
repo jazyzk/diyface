@@ -2,6 +2,8 @@
 
 这里是全项目的唯一真源：目录编号、z 序、可着色标记、默认颜色都只写一遍，
 渲染器、清单生成、前端三边都从这里读，避免「文档写 30、代码写 60」。
+
+槽位与 z 序按《虚拟头像设计系统 · 项目说明与分工》v1.0 的 10 槽位表定义。
 """
 
 from __future__ import annotations
@@ -14,18 +16,16 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SlotId(StrEnum):
-    """12 个槽位。v1 启用 8 个，其余 4 个只保留枚举与 z 序。"""
+    """10 个槽位，全部在本期交付。"""
 
     SKIN = "skin"
-    CHEEKS = "cheeks"
-    BANGS = "bangs"
-    SIDE_HAIR = "side_hair"
-    BROWS = "brows"
+    CLOTHES = "clothes"
+    HAIR_BACK = "hair_back"
+    HAIR = "hair"
     EYES = "eyes"
-    NOSE = "nose"
+    BROWS = "brows"
     MOUTH = "mouth"
     GLASSES = "glasses"
-    CLOTHES = "clothes"
     HAT = "hat"
     EXTRA = "extra"
 
@@ -45,28 +45,24 @@ class Slot:
 
 
 SLOTS: tuple[Slot, ...] = (
-    Slot(SlotId.SKIN, 10, True, "#F2D5B8", "skin", "01_skin", "脸型", "Skin"),
-    Slot(SlotId.CHEEKS, 20, True, "#F2A6A6", "cheeks", "05_cheeks", "腮红", "Cheeks"),
-    Slot(SlotId.BANGS, 30, True, "#3B2B23", "bangs", "02_bangs", "发型", "Bangs"),
-    Slot(SlotId.SIDE_HAIR, 40, True, "#3B2B23", "side_hair", "03_side_hair", "鬓发", "Side hair"),
-    Slot(SlotId.BROWS, 50, True, "#3B2B23", "brows", "04_brows", "眉毛", "Brows"),
-    Slot(SlotId.EYES, 60, False, "#2B2B2B", "eyes", "06_eyes", "眼睛", "Eyes"),
-    Slot(SlotId.NOSE, 70, True, "#E8B79A", "nose", "08_nose", "鼻子", "Nose"),
-    Slot(SlotId.MOUTH, 80, True, "#C0504D", "mouth", "07_mouth", "嘴", "Mouth"),
-    Slot(SlotId.GLASSES, 90, False, "#2B2B2B", "glasses", "09_glasses", "眼镜", "Glasses"),
-    Slot(SlotId.CLOTHES, 100, True, "#4A6FA5", "clothes", "11_clothes", "衣服", "Clothes"),
-    Slot(SlotId.HAT, 110, True, "#8E5A4A", "hat", "10_hat", "帽子", "Hats"),
-    Slot(SlotId.EXTRA, 120, True, "#D4A017", "extra", "12_extra", "配饰", "Extras"),
+    Slot(SlotId.SKIN, 10, True, "#E8B98A", "skin", "01_skin", "脸型", "Skin"),
+    Slot(SlotId.CLOTHES, 20, True, "#3A6EA5", "clothes", "02_clothes", "服装", "Clothes"),
+    Slot(SlotId.HAIR_BACK, 25, True, "#2B1B12", "hair_back", "03_hair_back", "后发", "Back hair"),
+    Slot(SlotId.HAIR, 30, True, "#2B1B12", "hair", "04_hair", "前发", "Hair"),
+    Slot(SlotId.EYES, 40, True, "#2B2B2B", "eyes", "05_eyes", "眼睛", "Eyes"),
+    Slot(SlotId.BROWS, 45, True, "#2B1B12", "brows", "06_brows", "眉毛", "Brows"),
+    Slot(SlotId.MOUTH, 50, True, "#C0504D", "mouth", "07_mouth", "嘴", "Mouth"),
+    Slot(SlotId.GLASSES, 60, False, "#2B2B2B", "glasses", "08_glasses", "眼镜", "Glasses"),
+    Slot(SlotId.HAT, 70, True, "#8E5A4A", "hat", "09_hat", "帽子", "Hats"),
+    Slot(SlotId.EXTRA, 80, False, "#D4A017", "extra", "10_extra", "配饰", "Extras"),
 )
 
 SLOTS_BY_Z: tuple[Slot, ...] = tuple(sorted(SLOTS, key=lambda slot: slot.z))
 
-#: 只保留枚举与 z 序、v1 不产出素材的槽位。
-RESERVED: frozenset[SlotId] = frozenset(
-    {SlotId.CHEEKS, SlotId.SIDE_HAIR, SlotId.BROWS, SlotId.NOSE}
-)
+#: 预留槽位（本期没有）：保留这个空集合，方便以后加槽位时区分启用范围。
+RESERVED: frozenset[SlotId] = frozenset()
 
-#: v1 真正对外提供的槽位，按 z 升序。
+#: 本期对外提供的槽位，按 z 升序。
 ACTIVE: tuple[Slot, ...] = tuple(slot for slot in SLOTS_BY_Z if slot.id not in RESERVED)
 
 SLOT_BY_ID: dict[SlotId, Slot] = {slot.id: slot for slot in SLOTS}
@@ -109,11 +105,7 @@ class AvatarRecipe(BaseModel):
 
 
 def default_recipe() -> AvatarRecipe:
-    """空配方：12 个槽位齐备但都不画，颜色取各槽位默认值。
-
-    M1 会把「每个槽位的第一张素材」作为默认选择，这里刻意保持为空，
-    让渲染器先学会处理「什么都不画」的边界情况。
-    """
+    """空配方：10 个槽位齐备但都不画，颜色取各槽位默认值。"""
     return AvatarRecipe(
         slots={slot.id: None for slot in SLOTS},
         colors={slot.id: slot.default_color for slot in ACTIVE},

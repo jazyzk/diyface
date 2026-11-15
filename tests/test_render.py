@@ -20,10 +20,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def build_catalog(workdir: Path) -> dict:
-    """造三张带明确色块的素材：脸、刘海、帽子，后两者在中间区域重叠。"""
-    write_png(workdir / "01_skin" / "skin_base.png", bbox=(300, 200, 724, 700), color=(255, 255, 255, 255))
-    write_png(workdir / "02_bangs" / "bangs_straight_01.png", bbox=(300, 150, 724, 400), color=(255, 255, 255, 255))
-    write_png(workdir / "10_hat" / "hat_beret_01.png", bbox=(350, 100, 674, 300), color=(255, 255, 255, 255))
+    """造四张带明确色块的素材：脸、前发、帽子、眼镜。"""
+    write_png(
+        workdir / "01_skin" / "skin_base.png",
+        bbox=(300, 220, 724, 780),
+        color=(255, 255, 255, 255),
+    )
+    write_png(
+        workdir / "04_hair" / "hair_straight_01.png",
+        bbox=(300, 150, 724, 400),
+        color=(255, 255, 255, 255),
+    )
+    write_png(
+        workdir / "09_hat" / "hat_beret_01.png",
+        bbox=(350, 100, 674, 300),
+        color=(255, 255, 255, 255),
+    )
+    write_png(
+        workdir / "08_glasses" / "glasses_round_01.png",
+        bbox=(380, 440, 644, 500),
+        color=(43, 43, 43, 255),
+    )
     return index(scan(workdir))
 
 
@@ -46,66 +63,68 @@ def test_none_slot_is_not_drawn(workdir: Path) -> None:
 
     image = compose(recipe_with(skin="skin_base"), catalog)
 
-    assert image.getpixel((512, 450))[3] == 255, "脸型区域应当被画出"
+    assert image.getpixel((512, 500))[3] == 255, "脸型区域应当被画出"
     assert image.getpixel((512, 120))[3] == 0, "没有帽子时顶部应保持透明"
 
 
 def test_later_layer_covers_earlier_one(workdir: Path) -> None:
     catalog = build_catalog(workdir)
-    recipe = recipe_with(bangs="bangs_straight_01", hat="hat_beret_01")
-    recipe.colors = {SlotId.BANGS: "#FF0000", SlotId.HAT: "#0000FF"}
+    recipe = recipe_with(hair="hair_straight_01", hat="hat_beret_01")
+    recipe.colors = {SlotId.HAIR: "#FF0000", SlotId.HAT: "#0000FF"}
 
     image = compose(recipe, catalog)
 
-    # 重叠区 (512, 250)：帽子在 bangs 之上，应当是蓝色
+    # 重叠区 (512, 250)：帽子在前发之上，应当是蓝色
     assert image.getpixel((512, 250))[:3] == (0, 0, 255)
-    # 只有刘海没有帽子的区域 (400, 380)：应当是红色
+    # 只有前发没有帽子的区域 (400, 380)：应当是红色
     assert image.getpixel((400, 380))[:3] == (255, 0, 0)
 
 
 def test_tintable_slot_uses_recipe_color(workdir: Path) -> None:
     catalog = build_catalog(workdir)
     recipe = recipe_with(skin="skin_base")
-    recipe.colors = {SlotId.SKIN: "#F2D5B8"}
+    recipe.colors = {SlotId.SKIN: "#E8B98A"}
 
     image = compose(recipe, catalog)
 
-    assert image.getpixel((512, 450))[:3] == (242, 213, 184)
+    assert image.getpixel((512, 500))[:3] == (232, 185, 138)
 
 
 def test_untintable_slot_keeps_original_pixels(workdir: Path) -> None:
-    eye = write_png(workdir / "06_eyes" / "eyes_round_01.png", bbox=(450, 480, 474, 504), color=(43, 43, 43, 255))
-    catalog = index(scan(workdir))
-    recipe = recipe_with(eyes="eyes_round_01")
-    recipe.colors = {SlotId.EYES: "#FF0000"}
+    catalog = build_catalog(workdir)
+    recipe = recipe_with(glasses="glasses_round_01")
+    recipe.colors = {SlotId.GLASSES: "#FF0000"}
 
     image = compose(recipe, catalog)
 
-    assert eye.is_file()
-    assert image.getpixel((460, 490))[:3] == (43, 43, 43), "眼睛不可着色，应保持原色"
+    assert image.getpixel((512, 470))[:3] == (43, 43, 43), "眼镜不可着色，应保持原色"
 
 
 def test_unknown_asset_raises(workdir: Path) -> None:
     catalog = build_catalog(workdir)
 
     with pytest.raises(KeyError, match="没有素材"):
-        compose(recipe_with(bangs="bangs_not_exist"), catalog)
+        compose(recipe_with(hair="hair_not_exist"), catalog)
 
 
 def test_render_returns_png_bytes(workdir: Path) -> None:
+    import io
+
     catalog = build_catalog(workdir)
     data = render(recipe_with(skin="skin_base"), catalog, size=256)
 
     assert data.startswith(b"\x89PNG")
-    image = Image.open(__import__("io").BytesIO(data))
+    image = Image.open(io.BytesIO(data))
     assert image.size == (256, 256)
 
 
 def test_render_supports_1024(workdir: Path) -> None:
+    import io
+
     catalog = build_catalog(workdir)
     data = render(recipe_with(skin="skin_base"), catalog, size=1024)
 
-    image = Image.open(__import__("io").BytesIO(data))
+    image = Image.open(io.BytesIO(data))
     assert image.size == (1024, 1024)
 
 
@@ -118,15 +137,15 @@ def test_render_rejects_unsupported_size(workdir: Path, bad_size: int) -> None:
 
 
 def test_real_assets_pipeline_runs() -> None:
-    """仓库里的 3 张占位图必须能走完整条渲染链路。"""
+    """仓库里的占位素材必须能走完整条渲染链路。"""
     catalog = index(scan(ROOT / "assets"))
     recipe = AvatarRecipe(
         slots={
             SlotId.SKIN: "skin_base",
-            SlotId.BANGS: "bangs_straight_01",
+            SlotId.HAIR: "hair_straight_01",
             SlotId.EYES: "eyes_round_01",
         },
-        colors={SlotId.SKIN: "#F2D5B8", SlotId.BANGS: "#3B2B23"},
+        colors={SlotId.SKIN: "#E8B98A", SlotId.HAIR: "#2B1B12"},
     )
 
     data = render(recipe, catalog, size=256)

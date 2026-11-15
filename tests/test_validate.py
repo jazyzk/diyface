@@ -21,11 +21,11 @@ from diyface.validate import (
 from tests.helpers import write_png
 
 
-def make_asset(workdir: Path, name: str = "bangs_straight_01", **kwargs) -> Path:
+def make_asset(workdir: Path, name: str = "hair_straight_01", **kwargs) -> Path:
     """造一张合规的素材图（1024 见方、有透明区）。"""
     options = {"bbox": (400, 200, 624, 400)}
     options.update(kwargs)
-    return write_png(workdir / "02_bangs" / f"{name}.png", **options)
+    return write_png(workdir / "04_hair" / f"{name}.png", **options)
 
 
 def add_mask(source: Path) -> Path:
@@ -97,7 +97,7 @@ def test_illegal_filename_is_reported(workdir: Path) -> None:
 
 def test_oversized_file_is_reported(workdir: Path) -> None:
     noise = Image.effect_noise((1024, 1024), 120).convert("RGBA")
-    asset = workdir / "02_bangs" / "bangs_noise_01.png"
+    asset = workdir / "04_hair" / "bangs_noise_01.png"
     asset.parent.mkdir(parents=True, exist_ok=True)
     noise.save(asset)
     assert asset.stat().st_size > MAX_BYTES, "测试素材本身要够大，否则用例没意义"
@@ -129,8 +129,8 @@ def test_validate_mask_checks_size(workdir: Path) -> None:
     assert any("尺寸" in problem for problem in validate_mask(asset))
 
 
-@pytest.mark.parametrize("name", ["a.png", "bangs_straight_01.png"])
+@pytest.mark.parametrize("name", ["a.png", "hair_straight_01.png"])
 def test_tint_mask_naming(name: str) -> None:
-    source = Path("assets/02_bangs") / name
+    source = Path("assets/04_hair") / name
 
     assert tint_mask_path(source).name == f"{source.stem}_tint.png"

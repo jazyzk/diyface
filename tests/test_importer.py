@@ -15,8 +15,8 @@ from tests.helpers import write_png
 @pytest.mark.parametrize(
     ("name", "expected"),
     [
-        ("Hair 3.png", SlotId.BANGS),
-        ("lorelei-bangs-2.png", SlotId.BANGS),
+        ("Hair 3.png", SlotId.HAIR),
+        ("lorelei-bangs-2.png", SlotId.HAIR),
         ("Eyes_5.png", SlotId.EYES),
         ("mouth smile.png", SlotId.MOUTH),
         ("glasses-round.png", SlotId.GLASSES),
@@ -57,7 +57,7 @@ def test_fit_canvas_centers_non_square_image() -> None:
 def test_fit_canvas_anchors_hair_to_top() -> None:
     source = Image.new("RGBA", (400, 200), (255, 0, 0, 255))
 
-    canvas = fit_canvas(source, slot=SlotId.BANGS)
+    canvas = fit_canvas(source, slot=SlotId.HAIR)
 
     assert canvas.getpixel((512, 5))[3] == 255, "发型应贴顶"
     assert canvas.getpixel((512, 900))[3] == 0
@@ -81,8 +81,8 @@ def test_plan_maps_files_and_skips_unknown(workdir: Path) -> None:
 
     entries, skipped = plan([hair, mouth, unknown, mask])
 
-    assert [entry.slot.id for entry in entries] == [SlotId.BANGS, SlotId.MOUTH]
-    assert [entry.target for entry in entries] == ["bangs_hair_1.png", "mouth_smile.png"]
+    assert [entry.slot.id for entry in entries] == [SlotId.HAIR, SlotId.MOUTH]
+    assert [entry.target for entry in entries] == ["hair_1.png", "mouth_smile.png"]
     assert {item.source.name for item in skipped} == {"whatever.png", "hair_tint.png"}
 
 
@@ -105,10 +105,10 @@ def test_install_writes_files_and_masks(workdir: Path) -> None:
     stats = install(entries, root)
 
     assert stats["written"] == 3
-    assert stats["masks"] == 2, "只有可着色槽位（发型、脸型）需要蒙版"
-    assert (root / "02_bangs" / "bangs_hair_1.png").is_file()
-    assert (root / "02_bangs" / "bangs_hair_1_tint.png").is_file()
-    assert (root / "06_eyes" / "eyes_1_tint.png").exists() is False
+    assert stats["masks"] == 3, "发型、脸型、眼睛都可着色，都要蒙版"
+    assert (root / "04_hair" / "hair_1.png").is_file()
+    assert (root / "04_hair" / "hair_1_tint.png").is_file()
+    assert (root / "05_eyes" / "eyes_1_tint.png").is_file()
 
     with Image.open(root / "01_skin" / "skin_head_1.png") as image:
         assert image.size == (1024, 1024)
@@ -116,20 +116,20 @@ def test_install_writes_files_and_masks(workdir: Path) -> None:
 
 
 def test_install_skips_masks_for_untintable_slot(workdir: Path) -> None:
-    eye = write_png(workdir / "export" / "eyes 1.png", bbox=(440, 470, 590, 540))
-    entries, _ = plan([eye])
+    glasses = write_png(workdir / "export" / "glasses 1.png", bbox=(380, 440, 644, 500))
+    entries, _ = plan([glasses])
 
     root = workdir / "assets"
     stats = install(entries, root)
 
     assert stats["masks"] == 0
-    assert (root / "06_eyes" / "eyes_1.png").is_file()
+    assert (root / "08_glasses" / "glasses_1.png").is_file()
 
 
 def test_entry_target_uses_slot_prefix() -> None:
-    entry = Entry(slot=SLOT_BY_ID[SlotId.BANGS], source=Path("x/Hair 1.png"), name="bangs_hair_1")
+    entry = Entry(slot=SLOT_BY_ID[SlotId.HAIR], source=Path("x/Hair 1.png"), name="hair_1")
 
-    assert entry.target == "bangs_hair_1.png"
+    assert entry.target == "hair_1.png"
 
 
 def test_verify_tree_respects_slot_tintable(workdir: Path) -> None:

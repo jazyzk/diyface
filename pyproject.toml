@@ -4,15 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "diyface"
-version = "0.1.0"
-description = "分层 DIY 头像生成器：FastAPI + Pillow"
+version = "0.2.0"
+description = "虚拟头像设计系统：Flask + Pillow 分层渲染"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "jazyzk" }]
 dependencies = [
-  "fastapi>=0.110",
-  "uvicorn>=0.29",
+  "flask>=3.0",
   "jinja2>=3.1",
   "pillow>=10.0",
   "pydantic>=2.6",
@@ -22,7 +21,6 @@ dependencies = [
 dev = [
   "pytest>=8.0",
   "pytest-cov>=5.0",
-  "httpx>=0.27",
   "numpy>=1.26",
 ]
 
@@ -32,6 +30,7 @@ packages = ["src/diyface"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+norecursedirs = ["tests/reports", "tests/fixtures", ".venv", "build", "dist"]
 addopts = "-q"
 
 [tool.ruff]

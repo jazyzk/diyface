@@ -63,7 +63,7 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 
 # 4) 装依赖（用清华源，避免 PyPI 直连超时）
-pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn jinja2 pillow pydantic pytest pytest-cov numpy httpx
+pip install -i https://pypi.tuna.tsinghua.edu.cn/simple flask uvicorn jinja2 pillow pydantic pytest pytest-cov numpy httpx
 
 # 5) 把项目装成本地包，之后 python -m diyface 才可用
 pip install -e .
@@ -74,7 +74,7 @@ pip install -e .
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn jinja2 pillow pydantic pytest pytest-cov numpy httpx
+pip install -i https://pypi.tuna.tsinghua.edu.cn/simple flask uvicorn jinja2 pillow pydantic pytest pytest-cov numpy httpx
 pip install -e .
 git config user.name "你的名字"
 git config user.email "你的邮箱"
@@ -96,7 +96,7 @@ git config core.hooksPath .githooks
 | --- | --- |
 | `python --version` | `Python 3.11.x` 或更高 |
 | `python -m pytest` | 最后一行 `71 passed, 11 skipped` |
-| `python -m uvicorn diyface.app:app --port 8000` | 浏览器打开 127.0.0.1:8000 能看到「DIY 头像生成器」 |
+| `python -m flask --app diyface.app run --port 8000` | 浏览器打开 127.0.0.1:8000 能看到「DIY 头像生成器」 |
 
 11 条跳过是 Word 任务书的校验（没装 `python-docx`），属正常，不用处理。
 
@@ -754,9 +754,9 @@ document.addEventListener("keydown", (event) => {
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from flask import Flask
+from flask.staticfiles import StaticFiles
+from flask.templating import Jinja2Templates
 
 from . import __version__
 from .catalog import index as build_index
@@ -778,12 +778,12 @@ def load_catalog() -> dict:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: Flask):
     load_catalog()
     yield
 
 
-app = FastAPI(title="diyface", version=__version__, lifespan=lifespan)
+app = Flask(title="diyface", version=__version__, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -803,7 +803,7 @@ def api_manifest() -> dict:
 ```python
 import hashlib
 
-from fastapi import HTTPException, Request, Response
+from flask import HTTPException, Request, Response
 from pydantic import BaseModel
 
 from .models import AvatarRecipe
@@ -924,8 +924,8 @@ def api_random(payload: RandomRequest | None = None) -> dict:
 **第 5 步：错误结构统一（1 小时）**
 
 ```python
-from fastapi import Request
-from fastapi.responses import JSONResponse
+from flask import Request
+from flask.responses import JSONResponse
 
 
 @app.exception_handler(HTTPException)
@@ -1099,7 +1099,7 @@ def recipe() -> AvatarRecipe:
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+from flask.testclient import TestClient
 
 from diyface.app import app
 
@@ -1161,7 +1161,7 @@ def check(path: Path, tintable: bool) -> list[str]:
         if image.mode != "RGBA":
             problems.append(f"模式 {image.mode} 不是 RGBA")
     if path.stat().st_size > MAX_BYTES:
-        problems.append(f"体积 {path.stat().st_size // 1024}KB 超过 120KB")
+        problems.append(f"体积 {path.stat().st_size // 1024}KB 超过 80KB")
     if set(path.stem) - ALLOWED:
         problems.append("文件名只允许小写字母、数字、下划线")
     return problems
@@ -1242,7 +1242,7 @@ README 保持三步可跑；CHANGELOG 每个 tag 记三条以内；周五打 tag
 | M1 | 命令行出图、快照 3 张、接口返回 PNG | A + F |
 | M2 | 30 张素材合规、清单非空 | D + E + F |
 | M3 | 页面能完整点选并导出 | B + C |
-| M4 | 43 张素材齐、随机 20 次无穿模 | D + E |
+| M4 | 54 张素材齐、随机 20 次无穿模 | D + E |
 | M5 | p95 小于 150 毫秒、Docker 镜像可跑 | C + F |
 | M6 | 线上可访问、README 三步跑通 | 全体 |
 
@@ -1259,7 +1259,7 @@ README 保持三步可跑；CHANGELOG 每个 tag 记三条以内；周五打 tag
 | 推送 | `git push -u origin <分支名>` |
 | 跑测试 | `python -m pytest` |
 | 只看失败 | `python -m pytest -x` |
-| 起服务 | `python -m uvicorn diyface.app:app --reload --port 8000` |
+| 起服务 | `python -m flask --app diyface.app run --debug --port 8000` |
 | 校验素材 | `python -m diyface verify` |
 | 撤销未提交改动 | `git restore <文件>` |
 | 拉取冲突 | `git pull --rebase`，冲突改完后 `git add` 与 `git rebase --continue` |

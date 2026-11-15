@@ -2,19 +2,17 @@
   "version": 1,
   "slots": {
     "skin": "skin_base",
-    "bangs": null,
+    "clothes": null,
+    "hair_back": null,
+    "hair": null,
     "eyes": null,
+    "brows": null,
     "mouth": null,
     "glasses": null,
     "hat": null,
-    "clothes": null,
-    "extra": null,
-    "cheeks": null,
-    "side_hair": null,
-    "brows": null,
-    "nose": null
+    "extra": null
   },
   "colors": {
-    "skin": "#F2D5B8"
+    "skin": "#E8B98A"
   }
 }

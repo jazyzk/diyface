@@ -613,9 +613,9 @@ class AvatarRecipe(BaseModel):
   "schema": 1,
   "slots": [
     {
-      "id": "bangs", "label": {"zh": "发型", "en": "Bangs"}, "z": 30,
+      "id": "hair", "label": {"zh": "发型", "en": "Bangs"}, "z": 30,
       "tintable": true, "default_color": "#3b2b23",
-      "assets": [{"id": "bangs_straight_01", "file": "02_bangs/bangs_straight_01.png"}]
+      "assets": [{"id": "hair_straight_01", "file": "04_hair/hair_straight_01.png"}]
     }
   ]
 }""",
@@ -654,7 +654,7 @@ class AvatarRecipe(BaseModel):
         [
             ["10", "skin", "脸型底", "启用"],
             ["20", "cheeks", "腮红与皱纹", "预留"],
-            ["30", "bangs", "刘海", "启用"],
+            ["30", "hair", "刘海", "启用"],
             ["40", "side_hair", "鬓发", "预留"],
             ["50", "brows", "眉与睫毛", "预留"],
             ["60", "eyes", "眼睛", "启用"],
@@ -760,8 +760,8 @@ class AvatarRecipe(BaseModel):
             ["A 渲染内核", "render.py、palettes.py、models.py", "合成管线、颜色映射、单元测试"],
             ["B 前端交互", "templates/、static/", "布局、素材格、取色、导出与分享"],
             ["C 接口与部署", "app.py、cache.py、randomizer.py", "路由、缓存、随机规则、CI 与上线"],
-            ["D 素材·头部", "02_bangs、06_eyes、10_hat", "21 张素材的绘制与对齐"],
-            ["E 素材·面部服饰", "01_skin、07_mouth、09_glasses 等", "22 张素材的绘制与对齐"],
+            ["D 素材·头部", "04_hair、05_eyes、10_hat", "21 张素材的绘制与对齐"],
+            ["E 素材·面部服饰", "01_skin、07_mouth、08_glasses 等", "22 张素材的绘制与对齐"],
             ["F 质量与文档", "tests/、docs/、scripts/", "测试体系、素材校验、进度同步"],
         ],
         "表 10  六人分工",

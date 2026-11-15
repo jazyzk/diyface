@@ -12,7 +12,7 @@ from pathlib import Path
 from PIL import Image
 
 CANVAS = 1024
-MAX_BYTES = 120 * 1024
+MAX_BYTES = 80 * 1024
 TINT_SUFFIX = "_tint.png"
 
 _NAME = re.compile(r"[a-z0-9]+(?:_[a-z0-9]+)*")
@@ -44,7 +44,7 @@ def validate_asset(path: Path, *, tintable: bool = True) -> list[str]:
         return problems
 
     if path.stat().st_size > MAX_BYTES:
-        problems.append(f"体积 {path.stat().st_size // 1024}KB 超过 120KB 上限")
+        problems.append(f"体积 {path.stat().st_size // 1024}KB 超过 80KB 上限")
 
     try:
         with Image.open(path) as image:

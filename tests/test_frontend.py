@@ -55,7 +55,7 @@ def test_index_inlines_manifest_that_matches_api() -> None:
     assert inline == api
     assert inline["schema"] == 1
     ids = [slot["id"] for slot in inline["slots"]]
-    assert {"skin", "bangs", "eyes"} <= set(ids)
+    assert {"skin", "hair", "eyes"} <= set(ids)
     assert [slot["z"] for slot in inline["slots"]] == sorted(slot["z"] for slot in inline["slots"])
     assert inline["default_recipe"]["slots"]["skin"] == "skin_base"
 
@@ -73,7 +73,7 @@ def test_index_has_noscript_fallback() -> None:
 
     assert "<noscript>" in body
     assert "交互需要启用 JavaScript" in body
-    assert "脸型" in body and "发型" in body and "眼睛" in body
+    assert "脸型" in body and "前发" in body and "眼睛" in body
 
 
 def test_app_js_is_served_and_keeps_core_interactions() -> None:

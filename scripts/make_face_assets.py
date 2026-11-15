@@ -191,11 +191,11 @@ TARGETS: dict[str, tuple] = {
     "07_mouth/mouth_tongue_01.png": (draw_mouth_tongue, True),
     "07_mouth/mouth_cat_01.png": (draw_mouth_cat, True),
     "07_mouth/mouth_flat_01.png": (draw_mouth_flat, True),
-    "09_glasses/glasses_round_01.png": (draw_glasses_round, False),
-    "09_glasses/glasses_square_01.png": (draw_glasses_square, False),
-    "09_glasses/glasses_sun_01.png": (draw_glasses_sun, False),
-    "09_glasses/glasses_half_01.png": (draw_glasses_half, False),
-    "09_glasses/glasses_goggle_01.png": (draw_glasses_goggle, False),
+    "08_glasses/glasses_round_01.png": (draw_glasses_round, False),
+    "08_glasses/glasses_square_01.png": (draw_glasses_square, False),
+    "08_glasses/glasses_sun_01.png": (draw_glasses_sun, False),
+    "08_glasses/glasses_half_01.png": (draw_glasses_half, False),
+    "08_glasses/glasses_goggle_01.png": (draw_glasses_goggle, False),
 }
 
 

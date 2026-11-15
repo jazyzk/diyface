@@ -19,23 +19,43 @@ from diyface.models import (
 )
 
 
-def test_twelve_slots_with_unique_z() -> None:
-    assert len(SLOTS) == 12
+def test_ten_slots_with_unique_z() -> None:
+    assert len(SLOTS) == 10
     z_values = [slot.z for slot in SLOTS]
-    assert len(set(z_values)) == 12, "z 序必须唯一"
+    assert len(set(z_values)) == 10, "z 序必须唯一"
     assert SLOTS_BY_Z == tuple(sorted(SLOTS, key=lambda slot: slot.z))
 
 
-def test_eight_active_slots_and_four_reserved() -> None:
-    assert len(ACTIVE) == 8
-    assert len(RESERVED) == 4
-    assert set(RESERVED).isdisjoint(slot.id for slot in ACTIVE)
+def test_all_slots_are_active() -> None:
+    """本期 10 个槽位全部交付，没有预留槽位。"""
+    assert len(ACTIVE) == 10
+    assert RESERVED == frozenset()
+
+
+def test_z_order_matches_design_doc() -> None:
+    expected = [
+        "skin",
+        "clothes",
+        "hair_back",
+        "hair",
+        "eyes",
+        "brows",
+        "mouth",
+        "glasses",
+        "hat",
+        "extra",
+    ]
+    assert [slot.id.value for slot in SLOTS_BY_Z] == expected
+
+
+def test_tintable_flags_match_design_doc() -> None:
+    untintable = {slot.id.value for slot in SLOTS if not slot.tintable}
+    assert untintable == {"glasses", "extra"}
 
 
 def test_folder_names_follow_convention() -> None:
-    for slot in SLOTS:
-        assert slot.folder_no.endswith("_" + slot.folder), f"{slot.id} 的目录名与槽位不一致"
-        assert slot.folder_no[:2].isdigit(), f"{slot.folder_no} 应以两位编号开头"
+    for index, slot in enumerate(SLOTS, start=1):
+        assert slot.folder_no == f"{index:02d}_{slot.folder}", f"{slot.id} 的目录编号不连续"
 
 
 def test_default_recipe_shape() -> None:
@@ -53,19 +73,19 @@ def test_recipe_rejects_unknown_field() -> None:
 
 def test_recipe_rejects_bad_color() -> None:
     with pytest.raises(ValidationError):
-        AvatarRecipe(colors={SlotId.BANGS: "red"})
+        AvatarRecipe(colors={SlotId.HAIR: "red"})
 
 
 def test_recipe_rejects_bad_asset_id() -> None:
     with pytest.raises(ValidationError):
-        AvatarRecipe(slots={SlotId.BANGS: "Bangs Straight!"})
+        AvatarRecipe(slots={SlotId.HAIR: "Hair Straight!"})
 
 
 def test_recipe_accepts_none_and_valid_values() -> None:
     recipe = AvatarRecipe(
-        slots={SlotId.BANGS: "bangs_straight_01", SlotId.HAT: None},
-        colors={SlotId.BANGS: "#3B2B23"},
+        slots={SlotId.HAIR: "hair_straight_01", SlotId.HAT: None},
+        colors={SlotId.HAIR: "#2B1B12"},
     )
 
-    assert recipe.slots[SlotId.BANGS] == "bangs_straight_01"
-    assert recipe.slot_ids() == [SlotId.BANGS]
+    assert recipe.slots[SlotId.HAIR] == "hair_straight_01"
+    assert recipe.slot_ids() == [SlotId.HAIR]

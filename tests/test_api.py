@@ -19,12 +19,12 @@ PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 def recipe_payload(**overrides: str | None) -> dict:
     slots: dict[str, str | None] = {slot.id.value: None for slot in SLOTS}
-    slots.update({"skin": "skin_base", "bangs": "bangs_straight_01", "eyes": "eyes_round_01"})
+    slots.update({"skin": "skin_base", "hair": "hair_straight_01", "eyes": "eyes_round_01"})
     slots.update(overrides)
     return {
         "version": 1,
         "slots": slots,
-        "colors": {"skin": "#F2D5B8", "bangs": "#3B2B23"},
+        "colors": {"skin": "#F2D5B8", "hair": "#3B2B23"},
     }
 
 
@@ -77,11 +77,11 @@ def test_render_rejects_bad_size() -> None:
 
 
 def test_render_reports_unknown_asset() -> None:
-    response = render(slots={"bangs": "bangs_not_exist"})
+    response = render(slots={"hair": "bangs_not_exist"})
 
     assert response.status == 422
     assert response.json["error"]["code"] == "UNKNOWN_ASSET"
-    assert "bangs" in response.json["error"]["message"]
+    assert "hair" in response.json["error"]["message"]
 
 
 def test_render_rejects_unknown_field() -> None:
@@ -103,7 +103,7 @@ def test_healthz_over_http() -> None:
 
 
 def test_static_asset_is_served() -> None:
-    response = http_client.call(app, "GET", "/assets/02_bangs/bangs_straight_01.png")
+    response = http_client.call(app, "GET", "/assets/04_hair/hair_straight_01.png")
 
     assert response.status == 200
     assert response.headers["content-type"] == "image/png"
@@ -131,7 +131,7 @@ def test_random_returns_recipe_for_all_slots() -> None:
 
     assert response.status == 200
     data = response.json
-    assert len(data["slots"]) == len(SLOTS) == 12
+    assert len(data["slots"]) == len(SLOTS) == 10
     assert data["seed"] is not None
 
 

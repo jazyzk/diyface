@@ -25,16 +25,15 @@ TINT_SUFFIX = "_tint.png"
 
 #: 文件名关键词 -> 槽位；按顺序匹配，先命中先用。
 HINTS: tuple[tuple[tuple[str, ...], SlotId], ...] = (
-    (("hair", "bangs", "fringe"), SlotId.BANGS),
+    (("hairback", "backhair", "side", "long"), SlotId.HAIR_BACK),
+    (("hair", "fringe", "bangs"), SlotId.HAIR),
     (("eyebrow", "brow"), SlotId.BROWS),
     (("eye",), SlotId.EYES),
     (("mouth", "lip"), SlotId.MOUTH),
     (("glass", "specs"), SlotId.GLASSES),
-    (("nose",), SlotId.NOSE),
     (("hat", "cap", "beanie"), SlotId.HAT),
     (("shirt", "cloth", "collar"), SlotId.CLOTHES),
     (("earring", "accessor", "extra"), SlotId.EXTRA),
-    (("blush", "cheek"), SlotId.CHEEKS),
     (("head", "face", "skin"), SlotId.SKIN),
 )
 
@@ -80,17 +79,16 @@ def slugify(name: str) -> str:
 
 #: 从 Figma 等工具导出的图层会被裁到内容边界，原始位置丢失。
 #: 这些槽位按「贴顶居中」摆放，其余按画布高度的比例居中。
-TOP_ANCHORED = frozenset({SlotId.BANGS, SlotId.HAT, SlotId.BROWS})
+TOP_ANCHORED = frozenset({SlotId.HAIR, SlotId.HAIR_BACK, SlotId.HAT, SlotId.BROWS})
 
 #: 非贴顶槽位的垂直中心（相对 1024 画布的比例）。
+#: 对应文档基线：脸中心 y=500、眼睛 y=460、嘴 y=620、肩线 y=880。
 CENTER_Y: dict[SlotId, float] = {
-    SlotId.SKIN: 0.44,
-    SlotId.EYES: 0.49,
-    SlotId.NOSE: 0.51,
-    SlotId.MOUTH: 0.58,
-    SlotId.CHEEKS: 0.55,
-    SlotId.GLASSES: 0.49,
-    SlotId.CLOTHES: 0.86,
+    SlotId.SKIN: 0.488,
+    SlotId.EYES: 0.449,
+    SlotId.MOUTH: 0.605,
+    SlotId.GLASSES: 0.449,
+    SlotId.CLOTHES: 0.859,
     SlotId.EXTRA: 0.50,
 }
 

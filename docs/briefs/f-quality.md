@@ -8,7 +8,7 @@
 
 ## 项目一句话
 
-分层 DIY 头像生成器（FastAPI + Pillow）。仓库 `D:\头像diy`，远端 `https://gitee.com/chords-of-fate/diyface`（公开库）。
+分层 DIY 头像生成器（Flask + Pillow）。仓库 `D:\头像diy`，远端 `https://gitee.com/chords-of-fate/diyface`（公开库）。
 
 ## 硬约定
 
