@@ -51,7 +51,7 @@ SLOTS: tuple[Slot, ...] = (
     Slot(SlotId.CLOTHES, 20, True, "#3A6EA5", "clothes", "02_clothes", "服装", "Clothes", "clothes_crew_01"),
     Slot(SlotId.HAIR_BACK, 25, True, "#2B1B12", "hair_back", "03_hair_back", "后发", "Back hair", "hair_back_long_straight_01"),
     Slot(SlotId.HAIR, 30, True, "#2B1B12", "hair", "04_hair", "前发", "Hair", "hair_straight_01"),
-    Slot(SlotId.EYES, 40, True, "#2B2B2B", "eyes", "05_eyes", "眼睛", "Eyes", "eyes_round_01"),
+    Slot(SlotId.EYES, 40, False, "#2B2B2B", "eyes", "05_eyes", "眼睛", "Eyes", "eyes_round_01"),
     Slot(SlotId.BROWS, 45, True, "#2B1B12", "brows", "06_brows", "眉毛", "Brows", "brows_soft_01"),
     Slot(SlotId.MOUTH, 50, True, "#C0504D", "mouth", "07_mouth", "嘴", "Mouth", "mouth_smile_01"),
     Slot(SlotId.GLASSES, 60, False, "#2B2B2B", "glasses", "08_glasses", "眼镜", "Glasses", "glasses_round_01"),

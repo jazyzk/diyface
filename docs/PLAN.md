@@ -102,7 +102,7 @@ CREATE INDEX idx_works_created ON works(created_at DESC);
 | 20 | clothes | 服装，压在肩上 | 启用 |
 | 25 | hair_back | 后发，压在服装与脸之间 | 启用 |
 | 30 | hair | 前发（刘海），压住额头 | 启用 |
-| 40 | eyes | 眼睛，眼珠颜色可换 | 启用 |
+| 40 | eyes | 眼睛（线稿，颜色固定） | 启用 |
 | 45 | brows | 眉毛 | 启用 |
 | 50 | mouth | 嘴 | 启用 |
 | 60 | glasses | 眼镜，压五官 | 启用 |

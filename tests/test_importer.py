@@ -105,10 +105,10 @@ def test_install_writes_files_and_masks(workdir: Path) -> None:
     stats = install(entries, root)
 
     assert stats["written"] == 3
-    assert stats["masks"] == 3, "发型、脸型、眼睛都可着色，都要蒙版"
+    assert stats["masks"] == 2, "发型与脸型可着色；眼睛是线稿，不做蒙版"
     assert (root / "04_hair" / "hair_1.png").is_file()
     assert (root / "04_hair" / "hair_1_tint.png").is_file()
-    assert (root / "05_eyes" / "eyes_1_tint.png").is_file()
+    assert not (root / "05_eyes" / "eyes_1_tint.png").exists()
 
     with Image.open(root / "01_skin" / "skin_head_1.png") as image:
         assert image.size == (1024, 1024)
