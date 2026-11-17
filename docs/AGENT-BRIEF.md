@@ -15,7 +15,7 @@
 | 约定 | 说明 |
 | --- | --- |
 | 每改必提 | 每次可交付的改动都要一个 commit，粒度是「一件事」 |
-| 每改必测 | 改代码就补/改测试；交付前 `pytest` 全绿（当前基线 265 passed, 11 skipped） |
+| 每改必测 | 改代码就补/改测试；交付前 `pytest` 全绿（当前基线 391 passed, 11 skipped） |
 | 提交信息 | `feat / fix / test / docs / chore(scope): 中文说明` |
 | 分支 | 不直推 `main`，一律 PR；一个 PR 一件事，≤ 400 行 |
 | 契约 | 槽位 id、目录编号、z 序、接口字段都**不要擅自改**；要改先写迁移说明 |
@@ -26,7 +26,7 @@
 ## 3 现状快照（2026-11-15）
 
 - 契约已按《项目说明与分工》v1.0 迁移：**10 槽位 / Flask 3 / 80KB / 新基线**，见 `docs/MIGRATION-v2.md`。
-- 测试 **265 passed, 11 skipped**（跳过的是 Word 任务书校验，缺 `python-docx`）。
+- 测试 **391 passed, 11 skipped**（跳过的是 Word 任务书校验，缺 `python-docx`）。
 - 已完成：分层渲染、相乘着色、多尺寸、CLI、素材校验、缩略图、快照基线、清单与渲染接口、随机、前端三栏交互。
 - 素材已交付 **54 张**（10 槽位全覆盖），由 `scripts/make_asset_pack.py` 与 `make_face_assets.py` 生成。
 - 未开始：`/api/analyze`（照片路径）、`/api/works`（SQLite 作品存储）、6 套预设模板。
@@ -132,6 +132,6 @@ git status
 ## 12 30 秒版（可直接粘贴给 DSH）
 
 > 仓库 `D:\头像diy`，虚拟头像设计系统（Flask 3 + Pillow，10 槽位）。
-> 先读 `AGENTS.md` 与 `docs/AGENT-BRIEF.md`；改完必须 `python -m pytest` 全绿（基线 265 passed, 11 skipped），
+> 先读 `AGENTS.md` 与 `docs/AGENT-BRIEF.md`；改完必须 `python -m pytest` 全绿（基线 391 passed, 11 skipped），
 > 素材改动还要跑 `python -m diyface verify`。接口契约见 `/api/render`、`/api/manifest`，不要擅自改槽位与字段。
 > 一次只做一件事，提交信息用 `类型(范围): 中文说明`，不要用 `--no-verify` 跳过测试。

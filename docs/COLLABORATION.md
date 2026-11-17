@@ -147,7 +147,7 @@ git push -u gitee feat/xxx         # 收工前，草稿也推
 
 - [ ] 已加入仓库为「开发者」，能 push。
 - [ ] `.venv` 建好，`pip install -e ".[dev]"` 成功。
-- [ ] `python -m pytest` 全绿（265 passed, 11 skipped 是当前基线）。
+- [ ] `python -m pytest` 全绿（391 passed, 11 skipped 是当前基线）。
 - [ ] `python -m flask --app diyface.app run` 能打开首页。
 - [ ] `git config core.hooksPath .githooks` 已执行。
 - [ ] 已推第一个分支并提了 PR。

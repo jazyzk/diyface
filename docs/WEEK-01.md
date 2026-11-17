@@ -100,7 +100,7 @@
 - [ ] 浏览器能点选素材，预览实时更新。
 - [ ] 能下载 256 与 1024 两张 PNG，四角透明。
 - [ ] 换发色后描边仍为黑色。
-- [ ] `python -m pytest` 全绿（基线 265 passed, 11 skipped）。
+- [ ] `python -m pytest` 全绿（基线 391 passed, 11 skipped）。
 - [ ] `python -m diyface verify` 零报错。
 - [ ] 素材不少于 22 张，缩略图已重建。
 - [ ] 每人本周至少一个已合并的 PR。

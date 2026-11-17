@@ -95,7 +95,7 @@ src/diyface/            应用代码（app.py 路由、models.py 槽位与配方
 src/diyface/templates/  Jinja2 模板（三栏首页）
 src/diyface/static/     样式与脚本（app.js、style.css）
 assets/                 分层素材（10 个槽位目录，_thumb/ 放缩略图）
-tests/                  测试（265 passed, 11 skipped）
+tests/                  测试（391 passed, 11 skipped）
 docs/                   计划书、协作指南、任务说明、迁移说明
 ```
 

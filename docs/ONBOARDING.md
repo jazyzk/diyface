@@ -55,7 +55,7 @@ python -m diyface build-thumbs    # 重建 256 缩略图
 python scripts/make_guide.py      # 生成参考线图 assets/_guide.png
 ```
 
-期望基线：`265 passed, 11 skipped`。看到这个数字才算环境对了。
+期望基线：`391 passed, 11 skipped`。看到这个数字才算环境对了。
 
 ## 3 第一次提交
 
