@@ -41,31 +41,22 @@ def load_table(part: str) -> dict[str, list[tuple[str, str]]]:
     return variants(folder / f"{part}.js")
 
 
-def calibrate() -> tuple[float, tuple[float, float]]:
-    """把 Adventurer 自己的坐标系映射到我们的基线：脸中心 (512, 500)、脸高约 620。"""
-    from svg_render import parse_path
+#: DiceBear Adventurer 的原始画布是 762×762，我们统一放大到 1024。
+VIEWBOX = 762.0
+SCALE = 1024 / VIEWBOX
+#: 合成模板里，除 base 外所有部件都套了 translate(-161 -83)。
+PART_SHIFT = (-161.0 * SCALE, -83.0 * SCALE)
 
-    base = load_table("base")["default"]
-    xs: list[float] = []
-    ys: list[float] = []
-    for d, _ in base:
-        for subpath in parse_path(d):
-            for x, y in subpath:
-                xs.append(x)
-                ys.append(y)
 
-    height = max(ys) - min(ys)
-    scale = 620 / height
-    center_x = (max(xs) + min(xs)) / 2
-    center_y = (max(ys) + min(ys)) / 2
-    offset = (512 - center_x * scale, 500 - center_y * scale)
-    print(f"标定：原脸高 {height:.0f}px，缩放 {scale:.2f}，偏移 {offset[0]:.0f},{offset[1]:.0f}")
-    return scale, offset
+def transform_for(part: str) -> tuple[float, tuple[float, float]]:
+    """返回该部件在 1024 画布上的缩放与偏移（规则抄自官方 index.js）。"""
+    if part == 'base':
+        return SCALE, (0.0, 0.0)
+    return SCALE, PART_SHIFT
 
 
 def main() -> int:
     assets = ROOT / "assets"
-    scale, offset = calibrate()
     for folder_name, (part, tintable) in SLOTS.items():
         table = load_table(part)
         keys = sorted(table)
@@ -83,6 +74,7 @@ def main() -> int:
                 min(index, len(keys) - 1)
             ]
             paths = table[key]
+            scale, offset = transform_for(part)
             image = render_paths(
                 recolour(paths, "#ffffff" if tintable else "#2B2B2B"),
                 scale=scale,
@@ -97,7 +89,7 @@ def main() -> int:
 
             image.save(path, optimize=True)
             if path.stat().st_size > 80 * 1024:
-                image.quantize(colors=96, method=Image.FASTOCTREE).save(path, optimize=True)
+                image.quantize(colors=96, method=Image.FASTOCTREE).convert("RGBA").save(path, optimize=True)
             if tintable:
                 Image.new("RGBA", (CANVAS, CANVAS), (255, 255, 255, 255)).save(
                     path.with_name(f"{path.stem}_tint.png")
