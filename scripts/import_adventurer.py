@@ -91,9 +91,15 @@ def main() -> int:
             if path.stat().st_size > 80 * 1024:
                 image.quantize(colors=96, method=Image.FASTOCTREE).convert("RGBA").save(path, optimize=True)
             if tintable:
-                Image.new("RGBA", (CANVAS, CANVAS), (255, 255, 255, 255)).save(
-                    path.with_name(f"{path.stem}_tint.png")
-                )
+                from fetch_library import BLACK, WHITE  # noqa: PLC0415
+
+                mask_paths = [
+                    (d, "#ffffff")
+                    for d, fill in paths
+                    if fill.strip().lower() not in BLACK and fill.strip().lower() not in WHITE
+                ]
+                mask = render_paths(mask_paths, scale=scale, offset=offset)
+                mask.save(path.with_name(f"{path.stem}_tint.png"))
             else:
                 stale = path.with_name(f"{path.stem}_tint.png")
                 if stale.exists():
