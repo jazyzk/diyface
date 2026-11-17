@@ -23,7 +23,7 @@
 ### 2.1 本期目标
 
 1. 捏脸路径闭环：点选、实时预览、换色、随机、下载 256/1024。
-2. 照片路径：只推断肤色、发色、眼镜/帽子有无、表情倾向；发型给候选不硬猜。
+2. 照片路径：YuNet 检测并裁剪人脸，只推断肤色、发色、眼镜/帽子有无、表情倾向；发型给候选不硬猜。
 3. 配方可存、可分享、可复现（SQLite + URL）。
 4. 6 套预设模板 + 随机生成。
 5. 工程闭环：pytest 全绿、素材校验零报错、README 三步跑通。
@@ -39,9 +39,14 @@
 | 后端 | Flask 3 + Jinja2 | 对应课程案例 2，轻量易演示 |
 | 数据 | SQLite + sqlite3 | 对应案例 1，零部署、单文件 |
 | 图像 | Pillow + numpy | 合成、缩放、快照比对 |
-| 视觉 | OpenCV + 预训练模型特征 + scikit-learn | CPU 分钟级完成训练闭环 |
+| 视觉 | OpenCV（YuNet 人脸检测）+ 预训练特征 + scikit-learn | 模型 340 KB，CPU 秒级；训练分钟级 |
 | 前端 | 原生 HTML/CSS/JS | 无构建链，降低协作成本 |
 | 测试 | pytest + Flask TestClient | 契约、快照、素材校验 |
+
+视觉方案说明：人脸检测用 OpenCV 自带的 **YuNet**（`face_detection_yunet_2023mar.onnx`，约 340 KB，
+CPU 单张毫秒级），属性分类用 CelebA 子集 + scikit-learn 线性模型。
+不引入 torch / ultralytics：三周周期内，模型体积、安装失败风险与收益不成比例；
+课程案例 3 的 YOLO 方案作为对照写进报告，说明取舍。
 
 ## 4 系统架构
 
@@ -49,7 +54,7 @@
 ① 表现层  HTML/CSS/JS（捏脸编辑器 / 结果页 / 作品页）
 ② 接口层  Flask：manifest / render / analyze / works / share
 ③ 业务层  配方校验 · 兼容性检查 · 随机生成 · 预设模板
-④ 能力层  渲染内核（Pillow） │ 视觉分析（OpenCV + sklearn）
+④ 能力层  渲染内核（Pillow） │ 视觉分析（YuNet + sklearn）
 ⑤ 数据层  assets/（素材库） · SQLite（作品与配方）
 ```
 
@@ -57,6 +62,37 @@
 照片路径多两段：`POST /api/analyze` → 质量门控 → 对齐 → 取色 → 属性分类 → Recipe + 置信度。
 
 ## 5 数据模型
+
+### 5.1 Recipe
+
+```json
+{
+  "schema": 1,
+  "slots": {
+    "skin": "skin_base", "clothes": null, "hair_back": null, "hair": "hair_straight_01",
+    "eyes": "eyes_round_01", "brows": null, "mouth": "mouth_smile_01",
+    "glasses": null, "hat": null, "extra": null
+  },
+  "colors": { "skin": "#E8B98A", "hair": "#2B1B12" },
+  "meta": { "seed": 20261113 }
+}
+```
+
+铁律：渲染函数是纯函数，同一份 Recipe 永远产出同一张图。
+
+### 5.2 数据库
+
+```sql
+CREATE TABLE works (
+  id          TEXT PRIMARY KEY,
+  session_id  TEXT NOT NULL,
+  title       TEXT NOT NULL,
+  recipe_json TEXT NOT NULL,
+  created_at  TEXT NOT NULL
+);
+CREATE INDEX idx_works_created ON works(created_at DESC);
+```
+
 
 ## 6 素材规范
 
@@ -93,36 +129,6 @@
 对齐基线：头顶 y=170、眼睛 y=460、脸中心 y=500、嘴 y=620、肩线 y=880。
 可着色素材 = 白色基色 + 灰度明暗 + 黑描边；眼镜与配饰直接上色。
 
-### 5.2 Recipe
-
-```json
-{
-  "schema": 1,
-  "slots": {
-    "skin": "skin_base", "clothes": null, "hair_back": null, "hair": "hair_straight_01",
-    "eyes": "eyes_round_01", "brows": null, "mouth": "mouth_smile_01",
-    "glasses": null, "hat": null, "extra": null
-  },
-  "colors": { "skin": "#E8B98A", "hair": "#2B1B12" },
-  "meta": { "seed": 20261113 }
-}
-```
-
-铁律：渲染函数是纯函数，同一份 Recipe 永远产出同一张图。
-
-### 5.1 数据库
-
-```sql
-CREATE TABLE works (
-  id          TEXT PRIMARY KEY,
-  session_id  TEXT NOT NULL,
-  title       TEXT NOT NULL,
-  recipe_json TEXT NOT NULL,
-  created_at  TEXT NOT NULL
-);
-CREATE INDEX idx_works_created ON works(created_at DESC);
-```
-
 ## 7 API 契约
 
 | 方法 | 路径 | 入参 | 出参 |
@@ -139,7 +145,7 @@ CREATE INDEX idx_works_created ON works(created_at DESC);
 错误码至少包含：`BAD_SIZE`、`UNKNOWN_ASSET`、`INVALID_REQUEST`、`NO_FACE`、`MULTI_FACE`、
 `FACE_TOO_SMALL`、`BLURRY`。
 
-### 5.5 契约冻结时间
+### 7.1 契约冻结时间
 
 | 时间 | 冻结内容 | 变更方式 |
 | --- | --- | --- |
@@ -220,7 +226,7 @@ scripts/          导入、缩略图、基准、参考图等一次性脚本
 
 ## 15 验收清单
 
-### 12.1 功能
+### 15.1 功能
 
 - [ ] 网页上能点选做出头像，下载 1024×1024 透明 PNG。
 - [ ] 上传照片能自动生成一版配方，肤色与发色基本准确。
@@ -228,7 +234,7 @@ scripts/          导入、缩略图、基准、参考图等一次性脚本
 - [ ] 至少一个真正训练过的分类器，报告中有准确率数据。
 - [ ] 6 套预设模板可用；移动端 375 像素可用。
 
-### 12.2 工程
+### 15.2 工程
 
 - [ ] pytest 全绿，核心模块覆盖率 > 70%。
 - [ ] 素材校验零报错。

@@ -242,6 +242,12 @@ class TestPlanDocument(MarkdownDocChecks, unittest.TestCase):
         self.assertEqual(len(z_tables), 1, "应存在唯一的 z 序表")
         self.assertEqual(len(z_tables[0]) - 2, len(SLOT_IDS), "z 序表数据行数应等于 10")
 
+    def test_vision_stack_matches_plan(self) -> None:
+        """视觉选型必须写明 YuNet + sklearn，避免又被改回重依赖方案。"""
+        for token in ("YuNet", "scikit-learn", "340 KB"):
+            self.assertIn(token, self.text, f"技术选型缺少：{token}")
+        self.assertIn("不引入 torch", self.text, "应写明不引入 torch 级依赖的理由")
+
     def test_asset_budget_matches_total(self) -> None:
         """§2.3 预算表逐槽位数量之和应等于声明的总数，改预算时不许漏改合计。"""
         budget_tables = [

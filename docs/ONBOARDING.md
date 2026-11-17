@@ -135,8 +135,8 @@ git pull --rebase
 
 步骤：
 
-1. 装 `opencv-python` 与 `scikit-learn`（写进 `pyproject.toml` 的 dev 依赖前先和队长确认）。
-2. 用一张正脸照跑检测，输出人脸框并保存调试图。
+1. 装 `opencv-python` 与 `scikit-learn`（写进 `pyproject.toml` 的 dev 依赖前先和队长确认）。人脸检测用 OpenCV 自带的 YuNet，模型文件 `face_detection_yunet_2023mar.onnx` 约 340 KB。
+2. 用 `cv2.FaceDetectorYN` 对一张正脸照跑检测，输出人脸框与五个关键点，并保存调试图。
 3. 下载 CelebA 子集 5000 张与属性标签，放 `data/`（`.gitignore` 里忽略）。
 4. 用预训练特征 + `LogisticRegression` 跑一次眼镜分类，记录准确率。
 5. 照片只在内存处理，不落盘；接口返回后丢弃原图。

@@ -10,6 +10,9 @@ coverage.xml
 .coverage
 htmlcov/
 
+# 参考资料（老师的案例 PDF、示例代码，只本地留档，不入库）
+_reference/
+
 # 测试产物
 tests/reports/
 
