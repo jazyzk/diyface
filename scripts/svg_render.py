@@ -19,7 +19,8 @@ import math
 import re
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageDraw
+import numpy as np
+from PIL import Image, ImageDraw
 
 CANVAS = 1024
 S = 2  # 超采样倍数，用来消锯齿
@@ -195,13 +196,63 @@ def parse_path(d: str) -> list[list[tuple[float, float]]]:
     return subpaths
 
 
+def _even_odd_mask(subpaths: list[list[tuple[float, float]]], size: int) -> Image.Image:
+    """扫描线偶奇填充：同一 path 的所有子路径放在一起算奇偶，才能正确镂空。"""
+    edges: list[tuple[float, float, float, float]] = []
+    for subpath in subpaths:
+        for (x1, y1), (x2, y2) in zip(subpath, subpath[1:]):
+            if y1 != y2:
+                edges.append((x1, y1, x2, y2))
+
+    mask = Image.new("1", (size, size), 0)
+    if not edges:
+        return mask
+
+    data = np.asarray(edges, dtype=float)
+    y_low = np.minimum(data[:, 1], data[:, 3])
+    y_high = np.maximum(data[:, 1], data[:, 3])
+    row_start = np.clip(np.ceil(y_low - 0.5), 0, size - 1).astype(int)
+    row_end = np.clip(np.ceil(y_high - 0.5), 0, size - 1).astype(int)
+    counts = np.maximum(row_end - row_start, 0)
+    total = int(counts.sum())
+    if total == 0:
+        return mask
+
+    edge_index = np.repeat(np.arange(len(data)), counts)
+    offsets = np.repeat(np.cumsum(counts) - counts, counts)
+    position = np.arange(total) - offsets
+    rows = row_start[edge_index] + position
+    y = rows + 0.5
+
+    x1 = data[edge_index, 0]
+    y1 = data[edge_index, 1]
+    x2 = data[edge_index, 2]
+    y2 = data[edge_index, 3]
+    xs = x1 + (y - y1) * (x2 - x1) / (y2 - y1)
+
+    order = np.lexsort((xs, rows))
+    rows_sorted = rows[order]
+    xs_sorted = xs[order]
+
+    unique_rows = np.unique(rows_sorted)
+
+    draw = ImageDraw.Draw(mask)
+    for row in unique_rows:
+        row_xs = xs_sorted[rows_sorted == row]
+        if len(row_xs) < 2:
+            continue
+        for left, right in zip(row_xs[0::2], row_xs[1::2]):
+            draw.line([(float(left), int(row)), (float(right), int(row))], fill=1)
+    return mask
+
+
 def render_paths(
     paths: list[tuple[str, str]],
     size: int = CANVAS,
     scale: float = 1.0,
     offset: tuple[float, float] = (0.0, 0.0),
 ) -> Image.Image:
-    """paths = [(d, fill)]，返回带 alpha 的 PNG 图。"""
+    """paths = [(d, fill)]，按顺序叠出 PNG（每条 path 内部用偶奇规则镂空）。"""
     big = size * S
     image = Image.new("RGBA", (big, big), (0, 0, 0, 0))
 
@@ -209,19 +260,14 @@ def render_paths(
         subpaths = parse_path(d)
         if not subpaths:
             continue
-
-        mask = Image.new("1", (big, big), 0)
-        for subpath in subpaths:
-            points = [
-                (round((px * scale + offset[0]) * S), round((py * scale + offset[1]) * S))
+        scaled = [
+            [
+                ((px * scale + offset[0]) * S, (py * scale + offset[1]) * S)
                 for px, py in subpath
             ]
-            if len(points) < 3:
-                continue
-            layer = Image.new("1", (big, big), 0)
-            ImageDraw.Draw(layer).polygon(points, fill=1)
-            mask = ImageChops.logical_xor(mask, layer)
-
+            for subpath in subpaths
+        ]
+        mask = _even_odd_mask(scaled, big)
         color = Image.new("RGBA", (big, big), _rgba(fill))
         color.putalpha(mask.convert("L"))
         image = Image.alpha_composite(image, color)
