@@ -84,7 +84,7 @@ git clone https://gitee.com/chords-of-fate/diyface.git
 | 60 | glasses 眼镜 | 否 | 5 |
 | 70 | hat 帽子 | 是 | 5 |
 | 80 | extra 配饰 | 否 | 3 |
-| — | 合计 | — | **54** |
+| — | 合计 | — | **54（已交付）** |
 
 画布 1024×1024、RGBA、单张不超过 80KB；对齐基线：头顶 y=170、眼睛 y=460、脸中心 y=500、嘴 y=620、肩线 y=880。
 

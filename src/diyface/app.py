@@ -49,10 +49,15 @@ def reset_catalog() -> None:
 
 def first_recipe(catalog: dict[SlotId, dict[str, Asset]]) -> AvatarRecipe:
     """首次进入时的默认脸：每个有素材的槽位取第一张。"""
-    slots = {
-        slot.id: (next(iter(catalog[slot.id])) if slot.id in catalog else None)
-        for slot in SLOTS
-    }
+    slots = {}
+    for slot in SLOTS:
+        available = catalog.get(slot.id, {})
+        if not available:
+            slots[slot.id] = None
+        elif slot.default_asset in available:
+            slots[slot.id] = slot.default_asset
+        else:
+            slots[slot.id] = next(iter(available))
     colors = {slot.id: slot.default_color for slot in ACTIVE}
     return AvatarRecipe(slots=slots, colors=colors)
 

@@ -42,19 +42,21 @@ class Slot:
     folder_no: str
     label_zh: str = ""
     label_en: str = ""
+    #: 首次进入时默认选中的素材 id；为空则退化为该槽位按名字排序的第一张。
+    default_asset: str = ""
 
 
 SLOTS: tuple[Slot, ...] = (
-    Slot(SlotId.SKIN, 10, True, "#E8B98A", "skin", "01_skin", "脸型", "Skin"),
-    Slot(SlotId.CLOTHES, 20, True, "#3A6EA5", "clothes", "02_clothes", "服装", "Clothes"),
-    Slot(SlotId.HAIR_BACK, 25, True, "#2B1B12", "hair_back", "03_hair_back", "后发", "Back hair"),
-    Slot(SlotId.HAIR, 30, True, "#2B1B12", "hair", "04_hair", "前发", "Hair"),
-    Slot(SlotId.EYES, 40, True, "#2B2B2B", "eyes", "05_eyes", "眼睛", "Eyes"),
-    Slot(SlotId.BROWS, 45, True, "#2B1B12", "brows", "06_brows", "眉毛", "Brows"),
-    Slot(SlotId.MOUTH, 50, True, "#C0504D", "mouth", "07_mouth", "嘴", "Mouth"),
-    Slot(SlotId.GLASSES, 60, False, "#2B2B2B", "glasses", "08_glasses", "眼镜", "Glasses"),
-    Slot(SlotId.HAT, 70, True, "#8E5A4A", "hat", "09_hat", "帽子", "Hats"),
-    Slot(SlotId.EXTRA, 80, False, "#D4A017", "extra", "10_extra", "配饰", "Extras"),
+    Slot(SlotId.SKIN, 10, True, "#E8B98A", "skin", "01_skin", "脸型", "Skin", "skin_base"),
+    Slot(SlotId.CLOTHES, 20, True, "#3A6EA5", "clothes", "02_clothes", "服装", "Clothes", "clothes_crew_01"),
+    Slot(SlotId.HAIR_BACK, 25, True, "#2B1B12", "hair_back", "03_hair_back", "后发", "Back hair", "hair_back_long_straight_01"),
+    Slot(SlotId.HAIR, 30, True, "#2B1B12", "hair", "04_hair", "前发", "Hair", "hair_straight_01"),
+    Slot(SlotId.EYES, 40, True, "#2B2B2B", "eyes", "05_eyes", "眼睛", "Eyes", "eyes_round_01"),
+    Slot(SlotId.BROWS, 45, True, "#2B1B12", "brows", "06_brows", "眉毛", "Brows", "brows_soft_01"),
+    Slot(SlotId.MOUTH, 50, True, "#C0504D", "mouth", "07_mouth", "嘴", "Mouth", "mouth_smile_01"),
+    Slot(SlotId.GLASSES, 60, False, "#2B2B2B", "glasses", "08_glasses", "眼镜", "Glasses", "glasses_round_01"),
+    Slot(SlotId.HAT, 70, True, "#8E5A4A", "hat", "09_hat", "帽子", "Hats", "hat_beret_01"),
+    Slot(SlotId.EXTRA, 80, False, "#D4A017", "extra", "10_extra", "配饰", "Extras", "extra_earring_01"),
 )
 
 SLOTS_BY_Z: tuple[Slot, ...] = tuple(sorted(SLOTS, key=lambda slot: slot.z))

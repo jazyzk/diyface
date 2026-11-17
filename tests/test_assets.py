@@ -12,6 +12,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
+from diyface.catalog import scan
+from diyface.models import SlotId
+
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
 CANVAS = 1024
@@ -68,3 +71,24 @@ def test_slot_folders_are_numbered() -> None:
         pytest.skip("assets/ 不存在")
     for folder in sorted(path for path in ASSETS.iterdir() if path.is_dir()):
         assert folder.name[:2].isdigit(), f"{folder.name} 应以两位编号开头，例如 04_hair"
+
+
+def test_budget_matches_plan() -> None:
+    """本轮交付的素材预算必须与 PLAN §6 一致：10 个槽位共 54 张。"""
+    budget = {
+        SlotId.SKIN: 2,
+        SlotId.CLOTHES: 6,
+        SlotId.HAIR_BACK: 6,
+        SlotId.HAIR: 8,
+        SlotId.EYES: 8,
+        SlotId.BROWS: 4,
+        SlotId.MOUTH: 7,
+        SlotId.GLASSES: 5,
+        SlotId.HAT: 5,
+        SlotId.EXTRA: 3,
+    }
+    catalog = scan(ASSETS)
+
+    for slot_id, expected in budget.items():
+        assert len(catalog[slot_id]) == expected, f"{slot_id} 应有 {expected} 张，实际 {len(catalog[slot_id])} 张"
+    assert sum(len(assets) for assets in catalog.values()) == 54

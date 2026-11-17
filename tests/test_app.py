@@ -9,7 +9,7 @@ import pytest
 
 from diyface import __version__
 from diyface.app import ASSETS_DIR, app
-from diyface.catalog import scan
+from diyface.catalog import index, scan
 from diyface.models import ACTIVE, SLOTS
 
 
@@ -49,7 +49,8 @@ def test_default_recipe_endpoint_picks_first_asset(client) -> None:
 
     assert data["slots"]["skin"] == "skin_base"
     assert data["slots"]["hair"] == "hair_straight_01"
-    assert data["slots"]["hat"] is None, "还没有素材的槽位保持为空"
+    assert data["slots"]["hat"] == "hat_beret_01", "54 张素材齐了，每个槽位都应有默认选中图"
+    assert all(value is not None for value in data["slots"].values())
 
 
 def test_healthz_reports_counts(client) -> None:
@@ -76,3 +77,12 @@ def test_index_renders_page_with_slot_list(client) -> None:
 @pytest.mark.parametrize("path", ["/", "/api/manifest", "/healthz"])
 def test_get_routes_accept_get(client, path: str) -> None:
     assert client.get(path).status_code == 200
+
+
+def test_default_asset_exists() -> None:
+    """每个槽位声明的默认素材必须真的在目录里，否则首屏会退回「随便挑一张」。"""
+    catalog = index(scan(ASSETS_DIR))
+
+    for slot in SLOTS:
+        assert slot.default_asset, f"{slot.id} 没有声明默认素材"
+        assert slot.default_asset in catalog[slot.id], f"{slot.id} 的默认素材不存在：{slot.default_asset}"

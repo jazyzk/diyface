@@ -28,7 +28,7 @@
 - 契约已按《项目说明与分工》v1.0 迁移：**10 槽位 / Flask 3 / 80KB / 新基线**，见 `docs/MIGRATION-v2.md`。
 - 测试 **265 passed, 11 skipped**（跳过的是 Word 任务书校验，缺 `python-docx`）。
 - 已完成：分层渲染、相乘着色、多尺寸、CLI、素材校验、缩略图、快照基线、清单与渲染接口、随机、前端三栏交互。
-- 素材现有 16 张（占位 3 + 面部与眼镜 13），目标 54 张。
+- 素材已交付 **54 张**（10 槽位全覆盖），由 `scripts/make_asset_pack.py` 与 `make_face_assets.py` 生成。
 - 未开始：`/api/analyze`（照片路径）、`/api/works`（SQLite 作品存储）、6 套预设模板。
 
 ## 4 怎么跑
