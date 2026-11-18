@@ -33,10 +33,10 @@ SHIFT = (-161.0 * SCALE, -83.0 * SCALE)
 CURATED: dict[str, tuple[str, bool, str, list[int]]] = {
     "01_skin": ("base", True, "skin_base", [1, 1]),
     "04_hair": (
-        "hair", True, "hair_straight_01", [1, 5, 9, 10, 15, 17, 21, 25, 32, 39]
+        "hair", True, "hair_straight_01", [1, 5, 9, 10, 15, 17, 19, 21, 22, 25, 32, 39, 41]
     ),
     "05_eyes": (
-        "eyes", False, "eyes_round_01", [1, 8, 9, 10, 15, 19, 21, 23, 24, 26]
+        "eyes", False, "eyes_round_01", [8, 9, 10, 15, 19, 21, 22, 23, 24, 26]
     ),
     "06_brows": ("eyebrows", True, "brows_soft_01", [1, 4, 8, 12]),
     "07_mouth": ("mouth", True, "mouth_smile_01", [1, 2, 3, 4, 5, 9, 16, 19]),
