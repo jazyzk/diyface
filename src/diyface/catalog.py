@@ -17,7 +17,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from .models import SLOTS, Slot, SlotId
+from .models import PALETTES, SLOTS, Slot, SlotId
 
 CANVAS = 1024
 _ASSET_NAME = re.compile(r"[a-z0-9]+(?:_[a-z0-9]+)*")
@@ -82,6 +82,7 @@ def manifest(catalog: dict[SlotId, list[Asset]]) -> dict:
                 "z": slot.z,
                 "tintable": slot.tintable,
                 "default_color": slot.default_color,
+                "colors": list(PALETTES.get(slot.id, (slot.default_color,))),
                 "assets": [
                     {"id": asset.id, "file": f"{slot.folder_no}/{asset.path.name}"}
                     for asset in assets

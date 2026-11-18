@@ -283,13 +283,16 @@ function syncAssetSelection() {
 function buildSwatches() {
   const colors = [];
   for (const slot of state.manifest.slots) {
-    const color = String(slot.default_color || "").toUpperCase();
-    if (slot.tintable && HEX_COLOR.test(color) && !colors.includes(color)) {
-      colors.push(color);
+    const palette = Array.isArray(slot.colors) ? slot.colors : [slot.default_color];
+    for (const raw of palette) {
+      const color = String(raw || "").toUpperCase();
+      if (slot.tintable && HEX_COLOR.test(color) && !colors.includes(color)) {
+        colors.push(color);
+      }
     }
   }
 
-  const buttons = colors.slice(0, 8).map((color) => {
+  const buttons = colors.slice(0, 12).map((color) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "swatch";

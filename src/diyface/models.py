@@ -67,6 +67,15 @@ RESERVED: frozenset[SlotId] = frozenset()
 #: 本期对外提供的槽位，按 z 升序。
 ACTIVE: tuple[Slot, ...] = tuple(slot for slot in SLOTS_BY_Z if slot.id not in RESERVED)
 
+#: 每个槽位可选的预设颜色（前端渲染成色块，用户点一下就换）。
+PALETTES: dict[SlotId, tuple[str, ...]] = {
+    SlotId.SKIN: ("#F7D7BE", "#E8B98A", "#C68B59", "#A1663F", "#6E4227", "#4A2C1B"),
+    SlotId.HAIR: ("#1B1B1B", "#2B1B12", "#4A312C", "#8B5A2B", "#C0392B", "#D9A441",
+                  "#4A6FA5", "#7D5BA6"),
+    SlotId.BROWS: ("#1B1B1B", "#2B1B12", "#4A312C", "#6E4227"),
+    SlotId.MOUTH: ("#C0504D", "#A63A3F", "#D9776F", "#8E4A5B"),
+}
+
 SLOT_BY_ID: dict[SlotId, Slot] = {slot.id: slot for slot in SLOTS}
 
 _HEX_COLOR = re.compile(r"#[0-9A-Fa-f]{6}")

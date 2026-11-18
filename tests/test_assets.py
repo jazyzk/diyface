@@ -77,14 +77,14 @@ def test_budget_matches_plan() -> None:
     """本轮交付的素材预算必须与 PLAN §6 一致：10 个槽位共 54 张。"""
     budget = {
         SlotId.SKIN: 2,
-        SlotId.HAIR: 8,
-        SlotId.EYES: 8,
+        SlotId.HAIR: 10,
+        SlotId.EYES: 10,
         SlotId.BROWS: 4,
-        SlotId.MOUTH: 7,
+        SlotId.MOUTH: 8,
         SlotId.GLASSES: 5,
     }
     catalog = scan(ASSETS)
 
     for slot_id, expected in budget.items():
         assert len(catalog[slot_id]) == expected, f"{slot_id} 应有 {expected} 张，实际 {len(catalog[slot_id])} 张"
-    assert sum(len(assets) for assets in catalog.values()) == 34
+    assert sum(len(assets) for assets in catalog.values()) == 39

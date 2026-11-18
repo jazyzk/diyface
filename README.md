@@ -110,3 +110,9 @@ docs/                   计划书、协作指南、任务说明、迁移说明
 - [给 DSH 的项目交接简报](docs/AGENT-BRIEF.md)
 - [协作与 Gitee 托管指南](docs/COLLABORATION.md)
 - [实验任务书](docs/DIY头像生成器-实验任务书.docx)
+
+## 素材来源
+
+- 角色素材：[Adventurer](https://www.dicebear.com/styles/adventurer/) by Lisa Wischofsky，
+  经 [DiceBear](https://www.dicebear.com/) 提供，[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)。
+  本项目对其做了裁切、重新分层与白底化处理。
