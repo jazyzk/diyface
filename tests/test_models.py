@@ -50,7 +50,7 @@ def test_z_order_matches_design_doc() -> None:
 
 def test_tintable_flags_match_design_doc() -> None:
     untintable = {slot.id.value for slot in SLOTS if not slot.tintable}
-    assert untintable == {"eyes", "glasses", "extra"}
+    assert untintable == {"eyes", "mouth", "glasses", "extra"}
 
 
 def test_folder_names_follow_convention() -> None:
