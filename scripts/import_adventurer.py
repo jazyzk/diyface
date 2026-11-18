@@ -39,7 +39,7 @@ CURATED: dict[str, tuple[str, bool, str, list[int]]] = {
         "eyes", False, "eyes_round_01", [8, 9, 10, 15, 19, 21, 22, 23, 24, 26]
     ),
     "06_brows": ("eyebrows", True, "brows_soft_01", [1, 4, 8, 12]),
-    "07_mouth": ("mouth", False, "mouth_smile_01", [1, 2, 3, 4, 5, 9, 16, 19]),
+    "07_mouth": ("mouth", False, "mouth_smile_01", [1, 2, 3, 4, 5, 9, 16]),
     "08_glasses": ("glasses", False, "glasses_round_01", [1, 2, 3, 4, 5]),
 }
 
