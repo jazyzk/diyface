@@ -36,10 +36,10 @@ CURATED: dict[str, tuple[str, bool, str, list[int]]] = {
         "hair", True, "hair_straight_01", [1, 5, 9, 10, 15, 17, 19, 21, 22, 25, 32, 39, 41]
     ),
     "05_eyes": (
-        "eyes", False, "eyes_round_01", [8, 9, 10, 15, 19, 21, 22, 23, 24, 26]
+        "eyes", False, "eyes_round_01", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     ),
     "06_brows": ("eyebrows", True, "brows_soft_01", [1, 4, 8, 12]),
-    "07_mouth": ("mouth", False, "mouth_smile_01", [1, 2, 3, 4, 5, 9, 16]),
+    "07_mouth": ("mouth", False, "mouth_smile_01", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 26]),
     "08_glasses": ("glasses", False, "glasses_round_01", [1, 2, 3, 4, 5]),
 }
 
