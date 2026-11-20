@@ -84,7 +84,11 @@ def manifest(catalog: dict[SlotId, list[Asset]]) -> dict:
                 "default_color": slot.default_color,
                 "colors": list(PALETTES.get(slot.id, (slot.default_color,))),
                 "assets": [
-                    {"id": asset.id, "file": f"{slot.folder_no}/{asset.path.name}"}
+                    {
+                        "id": asset.id,
+                        "file": f"{slot.folder_no}/{asset.path.name}",
+                        "thumb": f"{slot.folder_no}/_thumb/{asset.path.stem}_256.png",
+                    }
                     for asset in assets
                 ],
             }

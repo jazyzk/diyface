@@ -207,7 +207,7 @@ function selectSlot(slotId) {
   syncColorControls(slot);
 }
 
-function makeAssetButton({ id, file, selected, label, none = false }) {
+function makeAssetButton({ id, file, thumb, selected, label, none = false }) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = none ? "asset asset-none" : "asset";
@@ -223,7 +223,7 @@ function makeAssetButton({ id, file, selected, label, none = false }) {
     button.append(mark);
   } else {
     const image = document.createElement("img");
-    image.src = `/assets/${file}`;
+    image.src = `/assets/${thumb || file}`;
     image.alt = "";
     image.loading = "lazy";
     image.decoding = "async";
@@ -250,6 +250,7 @@ function renderAssets(slot) {
     makeAssetButton({
       id: asset.id,
       file: asset.file,
+      thumb: asset.thumb,
       selected: selected === asset.id,
       label: `${displayLabel(slot)}：${asset.id}`,
     })
@@ -280,15 +281,14 @@ function syncAssetSelection() {
 /* 颜色                                                                */
 /* ------------------------------------------------------------------ */
 
-function buildSwatches() {
+function buildSwatches(slot) {
   const colors = [];
-  for (const slot of state.manifest.slots) {
-    const palette = Array.isArray(slot.colors) ? slot.colors : [slot.default_color];
-    for (const raw of palette) {
-      const color = String(raw || "").toUpperCase();
-      if (slot.tintable && HEX_COLOR.test(color) && !colors.includes(color)) {
-        colors.push(color);
-      }
+  const palette =
+    slot && Array.isArray(slot.colors) ? slot.colors : slot ? [slot.default_color] : [];
+  for (const raw of palette) {
+    const color = String(raw || "").toUpperCase();
+    if (slot && slot.tintable && HEX_COLOR.test(color) && !colors.includes(color)) {
+      colors.push(color);
     }
   }
 
@@ -315,6 +315,8 @@ function syncColorControls(slot) {
   elements.colorHint.textContent = slot.tintable
     ? `正在调整「${displayLabel(slot)}」的颜色`
     : `「${displayLabel(slot)}」是固定素材，不支持换色`;
+
+  buildSwatches(slot);
 
   for (const button of elements.swatches.querySelectorAll(".swatch")) {
     button.disabled = !slot.tintable;
@@ -700,7 +702,7 @@ async function boot() {
     state.slotId = pickInitialSlot();
     if (!state.slotId) throw new Error("没有可用槽位");
 
-    buildSwatches();
+    buildSwatches(findSlot(state.slotId));
     renderCategories();
     selectSlot(state.slotId);
     wireEvents();

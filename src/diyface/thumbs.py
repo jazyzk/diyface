@@ -11,6 +11,8 @@ from pathlib import Path
 from PIL import Image
 
 from .catalog import scan
+from .models import SLOT_BY_ID
+from .palettes import tint
 
 THUMB_SIZE = 256
 THUMB_DIR = "_thumb"
@@ -27,11 +29,16 @@ def build_thumbs(root: Path, slot: str | None = None) -> int:
     for slot_id, assets in scan(root).items():
         if slot and slot_id.value != slot:
             continue
+        slot_meta = SLOT_BY_ID[slot_id]
         for asset in assets:
             target = thumb_path(asset.path)
             target.parent.mkdir(parents=True, exist_ok=True)
             with Image.open(asset.path) as image:
-                image.resize((THUMB_SIZE, THUMB_SIZE), Image.LANCZOS).save(
+                thumb = image.convert("RGBA")
+                if slot_meta.tintable:
+                    # 白底素材直接缩小会看不见，用槽位默认色染一遍再生成
+                    thumb = tint(thumb, slot_meta.default_color)
+                thumb.resize((THUMB_SIZE, THUMB_SIZE), Image.LANCZOS).save(
                     target, optimize=True
                 )
             count += 1

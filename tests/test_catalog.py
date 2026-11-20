@@ -108,6 +108,7 @@ def test_manifest_carries_metadata_and_relative_paths(assets_root: Path) -> None
     assert bangs["assets"][0] == {
         "id": "hair_straight_01",
         "file": "04_hair/hair_straight_01.png",
+        "thumb": "04_hair/_thumb/hair_straight_01_256.png",
     }
 
 

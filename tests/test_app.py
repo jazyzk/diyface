@@ -32,7 +32,7 @@ def test_manifest_lists_only_slots_that_have_assets(client) -> None:
     assert {"skin", "hair", "eyes"} <= set(ids), "至少这几个槽位必须有素材"
     for slot in data["slots"]:
         assert slot["assets"], "既然出现在清单里，就必须至少有一个素材"
-        assert set(slot["assets"][0]) == {"id", "file"}
+        assert set(slot["assets"][0]) == {"id", "file", "thumb"}
         assert slot["label"]["zh"], "每个槽位都要有中文名，前端直接显示"
 
 
@@ -50,7 +50,7 @@ def test_default_recipe_endpoint_picks_first_asset(client) -> None:
     assert data["slots"]["skin"] == "skin_base"
     assert data["slots"]["hair"] == "hair_straight_01"
     assert data["slots"]["hat"] is None, "本期不做帽子"
-    assert data["slots"]["glasses"] == "glasses_round_01"
+    assert data["slots"]["glasses"] is None, "眼镜是配饰，默认不戴"
 
 
 def test_healthz_reports_counts(client) -> None:

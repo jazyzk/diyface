@@ -50,9 +50,10 @@ def reset_catalog() -> None:
 def first_recipe(catalog: dict[SlotId, dict[str, Asset]]) -> AvatarRecipe:
     """首次进入时的默认脸：每个有素材的槽位取第一张。"""
     slots = {}
+    optional = {SlotId.GLASSES, SlotId.HAT, SlotId.EXTRA}
     for slot in SLOTS:
         available = catalog.get(slot.id, {})
-        if not available:
+        if not available or slot.id in optional:
             slots[slot.id] = None
         elif slot.default_asset in available:
             slots[slot.id] = slot.default_asset
