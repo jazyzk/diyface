@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: diyface
+    runtime: python
+    plan: free
+    buildCommand: pip install .
+    startCommand: python -m waitress --host=0.0.0.0 --port=$PORT diyface.app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+    healthCheckPath: /healthz
