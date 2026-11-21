@@ -18,9 +18,17 @@ def test_render_blueprint_starts_app_on_injected_port() -> None:
 def test_dockerfile_uses_wsgi_server() -> None:
     text = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
-    assert "waitress" in text
+    assert "waitress-serve" in text
     assert "diyface.app:app" in text
     assert "EXPOSE 8000" in text
+
+
+def test_assets_dir_can_be_overridden(tmp_path, monkeypatch) -> None:
+    """装进 site-packages 后要靠环境变量找到 assets，否则部署后 404。"""
+    from diyface import app as app_module
+
+    monkeypatch.setenv("DIYFACE_ASSETS", str(tmp_path))
+    assert app_module._resolve_assets() == tmp_path
 
 
 def test_serve_script_prints_lan_addresses() -> None:

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import random
 from pathlib import Path
 
@@ -22,7 +23,24 @@ from .render import SIZES, render
 
 BASE_DIR = Path(__file__).parent
 PROJECT_ROOT = BASE_DIR.parents[1]
-ASSETS_DIR = PROJECT_ROOT / "assets"
+
+
+def _resolve_assets() -> Path:
+    """素材目录：优先环境变量，其次当前工作目录，最后包旁边的仓库根。
+
+    部署到 Render/Docker 时包被安装进 site-packages，``PROJECT_ROOT`` 不再是仓库根，
+    所以必须允许用 ``DIYFACE_ASSETS`` 或工作目录来定位。
+    """
+    env = os.environ.get("DIYFACE_ASSETS")
+    if env:
+        return Path(env)
+    for candidate in (Path.cwd() / "assets", PROJECT_ROOT / "assets"):
+        if candidate.is_dir():
+            return candidate
+    return Path.cwd() / "assets"
+
+
+ASSETS_DIR = _resolve_assets()
 
 app = Flask(
     __name__,

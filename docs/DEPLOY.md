@@ -19,7 +19,7 @@
 
    ```yaml
    buildCommand: pip install .
-   startCommand: python -m waitress --host=0.0.0.0 --port=$PORT diyface.app:app
+   startCommand: waitress-serve --listen=0.0.0.0:$PORT diyface.app:app
    healthCheckPath: /healthz
    ```
 
@@ -59,7 +59,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -e ".[prod]"
 
 # 用 gunicorn（Linux）或 waitress（跨平台）跑起来
-python -m waitress --host=0.0.0.0 --port=8000 diyface.app:app
+waitress-serve --listen=0.0.0.0:8000 diyface.app:app
 ```
 
 再配 nginx 反向代理 + 域名 + HTTPS（Let's Encrypt）。开 80/443 端口，安全组放行。

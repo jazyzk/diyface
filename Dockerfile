@@ -1,7 +1,8 @@
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    DIYFACE_ASSETS=/app/assets
 
 WORKDIR /app
 
@@ -15,4 +16,4 @@ RUN pip install --no-cache-dir .
 EXPOSE 8000
 
 # waitress 是跨平台的 WSGI 服务器，Windows / Linux 都能跑
-CMD ["python", "-m", "waitress", "--host=0.0.0.0", "--port=8000", "diyface.app:app"]
+CMD ["waitress-serve", "--listen=0.0.0.0:8000", "diyface.app:app"]
