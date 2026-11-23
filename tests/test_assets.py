@@ -77,7 +77,7 @@ def test_budget_matches_plan() -> None:
     """本轮交付的素材预算必须与 PLAN §6 一致：10 个槽位共 54 张。"""
     budget = {
         SlotId.SKIN: 6,
-        SlotId.HAIR: 23,
+        SlotId.HAIR: 20,
         SlotId.EYES: 32,
         SlotId.BROWS: 8,
         SlotId.MOUTH: 25,
@@ -87,4 +87,24 @@ def test_budget_matches_plan() -> None:
 
     for slot_id, expected in budget.items():
         assert len(catalog[slot_id]) == expected, f"{slot_id} 应有 {expected} 张，实际 {len(catalog[slot_id])} 张"
-    assert sum(len(assets) for assets in catalog.values()) == 103
+    assert sum(len(assets) for assets in catalog.values()) == 100
+
+
+def test_hair_does_not_cover_eyes() -> None:
+    """发型不能把眼睛糊住：眼部区域被遮超过 60% 的素材视为坏素材。"""
+    import numpy as np
+    from PIL import Image
+
+    eye_box = (360, 430, 664, 620)
+    bad = []
+    for path in sorted((ASSETS / "04_hair").glob("*.png")):
+        if path.stem.endswith("_tint"):
+            continue
+        alpha = np.asarray(Image.open(path).convert("RGBA"))[
+            eye_box[1] : eye_box[3], eye_box[0] : eye_box[2], 3
+        ]
+        coverage = float((alpha > 40).mean())
+        if coverage > 0.60:
+            bad.append((path.stem, round(coverage, 2)))
+
+    assert not bad, f"这些发型遮住了眼睛：{bad}"
