@@ -109,6 +109,14 @@ function sanitizeRecipe(raw, manifest) {
     candidate.colors && typeof candidate.colors === "object" ? candidate.colors : {};
 
   const recipe = { version: 1, slots: {}, colors: {} };
+  let candidateStyle = null;
+  for (const value of Object.values(candidateSlots)) {
+    const style = styleOfAsset(value);
+    if (style) {
+      candidateStyle = style;
+      break;
+    }
+  }
 
   for (const [slotId, fallback] of Object.entries(baseSlots)) {
     if (!(slotId in candidateSlots)) {
@@ -123,7 +131,16 @@ function sanitizeRecipe(raw, manifest) {
     const slot = findSlot(slotId);
     const valid =
       slot && typeof value === "string" && slot.assets.some((asset) => asset.id === value);
-    recipe.slots[slotId] = valid ? value : (fallback ?? null);
+    if (valid) {
+      recipe.slots[slotId] = value;
+      continue;
+    }
+    // 非法素材：回退到「当前这套风格」的第一张，避免回退出另一套风格
+    const style = candidateStyle;
+    const sameStyle = style
+      ? (slot?.assets || []).find((asset) => (asset.style || STYLE_FALLBACK) === style)
+      : null;
+    recipe.slots[slotId] = sameStyle ? sameStyle.id : (fallback ?? null);
   }
 
   for (const [slotId, fallback] of Object.entries(baseColors)) {

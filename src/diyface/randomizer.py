@@ -28,6 +28,19 @@ def random_recipe(
     """按素材表随机拼一份配方；``style`` 给定时只在同一套风格里挑，避免混搭。"""
     rng = rng or random.Random()
 
+    if style is None:
+        available = sorted({style_of(asset_id) for assets in catalog.values() for asset_id in assets})
+        required = [slot.id for slot in ACTIVE if slot.id not in OPTIONAL and catalog.get(slot.id)]
+        complete = [
+            candidate
+            for candidate in available
+            if all(
+                any(style_of(asset_id) == candidate for asset_id in catalog[slot_id])
+                for slot_id in required
+            )
+        ]
+        style = rng.choice(complete or available) if available else None
+
     slots: dict[SlotId, str | None] = {}
     colors: dict[SlotId, str] = {}
 

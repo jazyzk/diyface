@@ -224,3 +224,13 @@ def test_render_rejects_bad_sticker() -> None:
     assert response.status == 422
     assert response.json["error"]["code"] == "INVALID_REQUEST"
     assert response.json["error"]["field"] in {"sticker", "stickers"}
+
+
+def test_render_rejects_mixed_styles() -> None:
+    recipe = http_client.call(app, "GET", "/api/recipe/default").json
+    recipe["slots"]["hair"] = "lorelei_hair_01"
+
+    response = http_client.call(app, "POST", "/api/render", json_body={"recipe": recipe, "size": 256})
+
+    assert response.status == 422
+    assert response.json["error"]["code"] == "MIXED_STYLE"

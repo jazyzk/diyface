@@ -111,3 +111,14 @@ def test_random_without_style_keeps_old_behaviour(workdir: Path) -> None:
     recipe = random_recipe(build_catalog(workdir), random.Random(1))
 
     assert recipe.slots["skin"]
+
+
+def test_random_without_style_picks_one_style(workdir: Path) -> None:
+    """不指定风格时，随机也要整套来自同一套库。"""
+    from diyface.catalog import style_of
+
+    catalog = build_catalog(workdir)
+    for seed in range(20):
+        recipe = random_recipe(catalog, random.Random(seed))
+        used = {style_of(asset_id) for asset_id in recipe.slots.values() if asset_id}
+        assert len(used) == 1, f"混了风格：{used}"

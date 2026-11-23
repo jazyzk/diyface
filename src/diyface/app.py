@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from . import __version__
 from .catalog import Asset, manifest, scan
 from .catalog import index as build_index
+from .catalog import style_of
 from .models import ACTIVE, SLOTS, AvatarRecipe, SlotId
 from .randomizer import random_recipe
 from .pixel import CANVAS, PixelArt, PixelError, decode
@@ -189,6 +190,10 @@ def api_render():
         recipe = AvatarRecipe.model_validate(payload.get("recipe"))
     except (ValidationError, ValueError):
         return error(422, "INVALID_REQUEST", "配方不符合约定", field="recipe")
+
+    used_styles = {style_of(asset_id) for asset_id in recipe.slots.values() if asset_id}
+    if len(used_styles) > 1:
+        return error(422, "MIXED_STYLE", "同一张头像不能混用两套风格", field="slots")
 
     size = payload.get("size", 256)
     if not isinstance(size, int) or isinstance(size, bool) or size not in SIZES:

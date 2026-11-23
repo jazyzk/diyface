@@ -84,7 +84,7 @@ python -m diyface render tests/fixtures/recipes/base.json --out out.png
 | GET | `/healthz` | ok、version、slots、assets |
 | GET | `/assets/<path:filename>` | 素材与缩略图 |
 
-错误统一 `{"error": {"code", "message", "field"}}`；已实现错误码 `BAD_SIZE`、`UNKNOWN_ASSET`、`INVALID_REQUEST`。
+错误统一 `{"error": {"code", "message", "field"}}`；已实现错误码 `BAD_SIZE`、`UNKNOWN_ASSET`、`INVALID_REQUEST`、`MIXED_STYLE`。
 规划中：`/api/analyze`（照片）、`/api/works`（作品 CRUD），错误码 `NO_FACE`、`MULTI_FACE`、`FACE_TOO_SMALL`、`BLURRY`。
 
 ## 7 数据模型要点
