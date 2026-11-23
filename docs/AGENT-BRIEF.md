@@ -64,7 +64,8 @@ python -m diyface render tests/fixtures/recipes/base.json --out out.png
 | `src/diyface/importer.py` | 外部导出图层导入（推断槽位、缩放、补蒙版） |
 | `src/diyface/guide.py` | 画素材用的参考线图 |
 | `src/diyface/bench.py` | 渲染耗时测量 |
-| `src/diyface/app.py` | Flask 路由：首页、清单、渲染、随机、健康检查 |
+| `src/diyface/pixel.py` | 32×32 拼豆画布：RLE 编解码与 PNG 渲染 |
+| `src/diyface/app.py` | Flask 路由：首页、清单、渲染、随机、拼豆、健康检查 |
 | `src/diyface/__main__.py` | CLI：`render` / `verify` / `build-thumbs` |
 
 ## 6 接口契约
@@ -76,6 +77,8 @@ python -m diyface render tests/fixtures/recipes/base.json --out out.png
 | GET | `/api/recipe/default` | 默认配方 |
 | POST | `/api/render` | 按配方返回 PNG，带 ETag / 304 |
 | POST | `/api/random` | 合法随机配方，可带 seed |
+| GET | `/pixel` | 拼豆画布页面（32×32 自由填色） |
+| POST | `/api/pixel/render` | 拼豆画布渲染成 PNG |
 | GET | `/healthz` | ok、version、slots、assets |
 | GET | `/assets/<path:filename>` | 素材与缩略图 |
 

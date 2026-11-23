@@ -149,3 +149,47 @@ def test_random_recipe_can_be_rendered() -> None:
 
     assert response.status == 200
     assert response.body.startswith(PNG_MAGIC)
+
+
+def test_pixel_page_renders() -> None:
+    response = http_client.call(app, "GET", "/pixel")
+
+    assert response.status == 200
+    assert "拼豆画布" in response.body.decode("utf-8")
+
+
+def test_pixel_render_returns_png() -> None:
+    response = http_client.call(
+        app,
+        "POST",
+        "/api/pixel/render",
+        json_body={"palette": ["#FF0000"], "pixels": "0x1024", "size": 256},
+    )
+
+    assert response.status == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.body.startswith(b"\x89PNG")
+
+
+def test_pixel_render_rejects_bad_pixels() -> None:
+    response = http_client.call(
+        app,
+        "POST",
+        "/api/pixel/render",
+        json_body={"palette": ["#FF0000"], "pixels": "nope"},
+    )
+
+    assert response.status == 422
+    assert response.json["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_pixel_render_rejects_bad_size() -> None:
+    response = http_client.call(
+        app,
+        "POST",
+        "/api/pixel/render",
+        json_body={"palette": ["#FF0000"], "pixels": "0x1024", "size": 512},
+    )
+
+    assert response.status == 422
+    assert response.json["error"]["code"] == "BAD_SIZE"

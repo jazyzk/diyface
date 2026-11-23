@@ -7,11 +7,13 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import os
 import random
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request, send_from_directory
+from PIL import Image
 from pydantic import ValidationError
 
 from . import __version__
@@ -19,6 +21,8 @@ from .catalog import Asset, manifest, scan
 from .catalog import index as build_index
 from .models import ACTIVE, SLOTS, AvatarRecipe, SlotId
 from .randomizer import random_recipe
+from .pixel import CANVAS, PixelArt, PixelError, decode
+from .pixel import render as render_pixel
 from .render import SIZES, render
 
 BASE_DIR = Path(__file__).parent
@@ -105,6 +109,47 @@ def index():
         slots=payload["slots"],
         version=__version__,
         manifest=payload,
+    )
+
+
+@app.get("/pixel")
+def pixel_page():
+    """拼豆画布：32×32 自由填色。"""
+    return render_template("pixel.html", title="拼豆画布 · DIY 头像", version=__version__)
+
+
+@app.post("/api/pixel/render")
+def api_pixel_render():
+    """把 32×32 画布渲染成 PNG。"""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return error(422, "INVALID_REQUEST", "请求体必须是 JSON 对象")
+
+    size = payload.get("size", 1024)
+    if not isinstance(size, int) or isinstance(size, bool) or size not in SIZES:
+        return error(422, "BAD_SIZE", f"size 只能是 {SIZES} 之一", field="size")
+
+    style = payload.get("style", "bead")
+    try:
+        cells = decode(payload.get("pixels", ""))
+        art = PixelArt(palette=payload.get("palette") or [], cells=cells)
+        image = render_pixel(art, style=str(style))
+    except PixelError as exc:
+        return error(422, "INVALID_REQUEST", str(exc), field="pixels")
+
+    if size != CANVAS:
+        image = image.resize((size, size), Image.NEAREST)
+
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    png = buffer.getvalue()
+    etag = '"' + hashlib.sha1(png).hexdigest()[:16] + '"'
+    if request.headers.get("If-None-Match") == etag:
+        return Response(status=304)
+    return Response(
+        png,
+        mimetype="image/png",
+        headers={"ETag": etag, "Cache-Control": "public, max-age=86400"},
     )
 
 
