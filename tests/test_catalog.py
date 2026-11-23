@@ -14,6 +14,8 @@ from pathlib import Path
 import pytest
 
 from diyface.catalog import index, manifest, scan, scan_slot
+
+ASSETS = Path(__file__).resolve().parents[1] / "assets"
 from diyface.models import SLOTS, SlotId
 from tests.helpers import write_png
 
@@ -109,6 +111,7 @@ def test_manifest_carries_metadata_and_relative_paths(assets_root: Path) -> None
         "id": "hair_straight_01",
         "file": "04_hair/hair_straight_01.png",
         "thumb": "04_hair/_thumb/hair_straight_01_256.png",
+        "style": "adventurer",
     }
 
 
@@ -128,3 +131,23 @@ def test_real_assets_directory_is_scannable() -> None:
 
     assert {SlotId.SKIN, SlotId.HAIR, SlotId.EYES} <= set(catalog)
     assert sum(len(assets) for assets in catalog.values()) >= 3
+
+
+def test_manifest_lists_two_styles() -> None:
+    """清单要带上风格列表，且默认风格排在第一位。"""
+    data = manifest(scan(ASSETS))
+
+    styles = data["styles"]
+    assert [style["id"] for style in styles][0] == "adventurer"
+    assert {style["id"] for style in styles} == {"adventurer", "lorelei"}
+    for style in styles:
+        assert style["label"]["zh"]
+        assert style["defaults"], "每种风格至少要有默认素材"
+        assert "glasses" not in style["defaults"], "默认不戴眼镜"
+
+
+def test_style_of_uses_prefix() -> None:
+    from diyface.catalog import style_of
+
+    assert style_of("lorelei_hair_01") == "lorelei"
+    assert style_of("hair_straight_01") == "adventurer"

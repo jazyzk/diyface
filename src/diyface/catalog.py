@@ -63,6 +63,40 @@ def scan(root: Path) -> dict[SlotId, list[Asset]]:
     return catalog
 
 
+STYLE_PREFIXES: dict[str, str] = {
+    "lorelei_": "lorelei",
+}
+
+STYLE_LABELS: dict[str, dict[str, str]] = {
+    "adventurer": {"zh": "美式卡通", "en": "Adventurer"},
+    "lorelei": {"zh": "手绘线稿", "en": "Lorelei"},
+}
+
+
+def style_of(asset_id: str) -> str:
+    """从素材 id 判断属于哪套风格；没有前缀的归入默认风格。"""
+    for prefix, style in STYLE_PREFIXES.items():
+        if asset_id.startswith(prefix):
+            return style
+    return "adventurer"
+
+
+def styles(catalog: dict[SlotId, list[Asset]]) -> list[dict]:
+    """给前端的风格列表：每种风格在每个槽位上的默认素材。"""
+    defaults: dict[str, dict[str, str]] = {}
+    for slot in SLOTS:
+        if slot.id is SlotId.GLASSES:
+            continue
+        for asset in catalog.get(slot.id, []):
+            style = style_of(asset.id)
+            defaults.setdefault(style, {}).setdefault(slot.id.value, asset.id)
+    ordered = sorted(defaults.items(), key=lambda item: (item[0] != "adventurer", item[0]))
+    return [
+        {"id": style, "label": STYLE_LABELS.get(style, {"zh": style, "en": style}), "defaults": slots}
+        for style, slots in ordered
+    ]
+
+
 def index(catalog: dict[SlotId, list[Asset]]) -> dict[SlotId, dict[str, Asset]]:
     """转成渲染器需要的「槽位 → 素材 id → 素材」两层字典。"""
     return {slot: {asset.id: asset for asset in assets} for slot, assets in catalog.items()}
@@ -88,9 +122,10 @@ def manifest(catalog: dict[SlotId, list[Asset]]) -> dict:
                         "id": asset.id,
                         "file": f"{slot.folder_no}/{asset.path.name}",
                         "thumb": f"{slot.folder_no}/_thumb/{asset.path.stem}_256.png",
+                        "style": style_of(asset.id),
                     }
                     for asset in assets
                 ],
             }
         )
-    return {"schema": 1, "slots": slots}
+    return {"schema": 1, "slots": slots, "styles": styles(catalog)}

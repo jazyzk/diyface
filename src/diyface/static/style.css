@@ -325,6 +325,30 @@ a {
   background: rgba(59, 110, 245, .06);
 }
 
+.style-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 12px;
+  flex-wrap: wrap;
+}
+
+.style-tab {
+  flex: 1 1 auto;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.style-tab[aria-selected="true"] {
+  background: #e8efff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
 .preview-card {
   position: relative;
   display: grid;
@@ -713,6 +737,30 @@ kbd {
 .sticker-pin.is-selected {
   border: 1px solid rgba(59, 110, 245, .9);
   background: rgba(59, 110, 245, .06);
+}
+
+.style-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 12px;
+  flex-wrap: wrap;
+}
+
+.style-tab {
+  flex: 1 1 auto;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.style-tab[aria-selected="true"] {
+  background: #e8efff;
+  border-color: var(--accent);
+  font-weight: 600;
 }
 
 .preview-card {

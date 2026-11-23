@@ -76,15 +76,15 @@ def test_slot_folders_are_numbered() -> None:
 def test_budget_matches_plan() -> None:
     """本轮交付的素材预算必须与 PLAN §6 一致：10 个槽位共 54 张。"""
     budget = {
-        SlotId.SKIN: 2,
-        SlotId.HAIR: 15,
-        SlotId.EYES: 24,
-        SlotId.BROWS: 4,
-        SlotId.MOUTH: 17,
-        SlotId.GLASSES: 5,
+        SlotId.SKIN: 6,
+        SlotId.HAIR: 23,
+        SlotId.EYES: 32,
+        SlotId.BROWS: 8,
+        SlotId.MOUTH: 25,
+        SlotId.GLASSES: 9,
     }
     catalog = scan(ASSETS)
 
     for slot_id, expected in budget.items():
         assert len(catalog[slot_id]) == expected, f"{slot_id} 应有 {expected} 张，实际 {len(catalog[slot_id])} 张"
-    assert sum(len(assets) for assets in catalog.values()) == 67
+    assert sum(len(assets) for assets in catalog.values()) == 103

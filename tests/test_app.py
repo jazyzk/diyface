@@ -32,7 +32,7 @@ def test_manifest_lists_only_slots_that_have_assets(client) -> None:
     assert {"skin", "hair", "eyes"} <= set(ids), "至少这几个槽位必须有素材"
     for slot in data["slots"]:
         assert slot["assets"], "既然出现在清单里，就必须至少有一个素材"
-        assert set(slot["assets"][0]) == {"id", "file", "thumb"}
+        assert set(slot["assets"][0]) == {"id", "file", "thumb", "style"}
         assert slot["label"]["zh"], "每个槽位都要有中文名，前端直接显示"
 
 

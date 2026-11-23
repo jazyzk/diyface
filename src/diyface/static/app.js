@@ -33,9 +33,12 @@ const elements = {
   stickerStatus: element("sticker-status"),
   stickerRemove: element("sticker-remove"),
   stickerLayer: element("sticker-layer"),
+  styleTabs: element("style-tabs"),
   stickerScale: element("sticker-scale"),
   stickerScaleValue: element("sticker-scale-value"),
 };
+
+const STYLE_FALLBACK = "adventurer";
 
 const STICKER_KEY = "diyface.stickers.v2";
 const LEGACY_STICKER_KEY = "diyface.sticker.v1";
@@ -183,6 +186,68 @@ function pickInitialSlot() {
 /* 类目与素材                                                          */
 /* ------------------------------------------------------------------ */
 
+function styleOfAsset(assetId) {
+  if (!assetId || !state.manifest) return null;
+  for (const slot of state.manifest.slots) {
+    const found = (slot.assets || []).find((asset) => asset.id === assetId);
+    if (found) return found.style || STYLE_FALLBACK;
+  }
+  return null;
+}
+
+function currentStyle() {
+  if (!state.manifest) return STYLE_FALLBACK;
+  for (const slotId of ["skin", "hair", "eyes", "mouth"]) {
+    const style = styleOfAsset(state.recipe?.slots?.[slotId]);
+    if (style) return style;
+  }
+  return state.manifest.styles?.[0]?.id || STYLE_FALLBACK;
+}
+
+function assetList(slot) {
+  const style = state.style || STYLE_FALLBACK;
+  return (slot.assets || []).filter((asset) => (asset.style || STYLE_FALLBACK) === style);
+}
+
+function buildStyleTabs() {
+  const box = elements.styleTabs;
+  if (!box || !state.manifest?.styles) return;
+  const tabs = state.manifest.styles.map((style) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "style-tab";
+    button.dataset.styleId = style.id;
+    button.textContent = style.label?.zh || style.id;
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-selected", String(style.id === (state.style || STYLE_FALLBACK)));
+    button.addEventListener("click", () => applyStyle(style.id));
+    return button;
+  });
+  box.replaceChildren(...tabs);
+}
+
+function applyStyle(styleId) {
+  const style = (state.manifest.styles || []).find((item) => item.id === styleId);
+  if (!style || !state.recipe) return;
+  for (const slot of state.manifest.slots) {
+    const next = style.defaults?.[slot.id];
+    if (next) state.recipe.slots[slot.id] = next;
+    else state.recipe.slots[slot.id] = null;
+  }
+  state.style = styleId;
+  saveRecipe();
+  buildStyleTabs();
+  renderCategories();
+  const slot = findSlot(state.slotId);
+  if (slot) {
+    renderAssets(slot);
+    syncColorControls(slot);
+  }
+  syncAssetSelection();
+  schedulePreview();
+  toast(`已切换到「${style.label?.zh || styleId}」`);
+}
+
 function renderCategories() {
   const buttons = state.manifest.slots.map((slot) => {
     const button = document.createElement("button");
@@ -196,7 +261,7 @@ function renderCategories() {
 
     const count = document.createElement("span");
     count.className = "category-count";
-    count.textContent = String(slot.assets.length);
+    count.textContent = String(assetList(slot).length);
     count.setAttribute("aria-hidden", "true");
 
     button.append(label, count);
@@ -247,7 +312,7 @@ function makeAssetButton({ id, file, thumb, selected, label, none = false }) {
 }
 
 function renderAssets(slot) {
-  const assets = slot.assets || [];
+  const assets = assetList(slot);
   const selected = state.recipe.slots[slot.id];
 
   const none = makeAssetButton({
@@ -982,8 +1047,13 @@ async function boot() {
       throw new Error("素材清单为空");
     }
 
+    state.style = currentStyle();
+    buildStyleTabs();
+
     const initial = loadInitialRecipe(state.manifest);
     state.recipe = initial.recipe;
+    state.style = currentStyle();
+    buildStyleTabs();
     state.slotId = pickInitialSlot();
     if (!state.slotId) throw new Error("没有可用槽位");
 
