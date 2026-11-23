@@ -33,6 +33,8 @@ const elements = {
   stickerStatus: element("sticker-status"),
   stickerRemove: element("sticker-remove"),
   stickerLayer: element("sticker-layer"),
+  stickerScale: element("sticker-scale"),
+  stickerScaleValue: element("sticker-scale-value"),
 };
 
 const STICKER_KEY = "diyface.stickers.v2";
@@ -50,6 +52,8 @@ const state = {
   randomBusy: false,
   downloading: false,
   previewStatusKind: "",
+  stickers: [],
+  selectedSticker: 0,
 };
 
 /* ------------------------------------------------------------------ */
@@ -393,6 +397,8 @@ function refreshStickerUi() {
       : "还没有拼豆贴纸";
   }
   if (elements.stickerRemove) elements.stickerRemove.hidden = count === 0;
+  if (state.selectedSticker >= count) state.selectedSticker = Math.max(0, count - 1);
+  syncScaleControl();
   renderStickerLayer();
 }
 
@@ -434,7 +440,7 @@ function renderStickerLayer() {
   if (!layer) return;
   const pins = state.stickers.map((sticker, index) => {
     const pin = document.createElement("div");
-    pin.className = "sticker-pin";
+    pin.className = index === state.selectedSticker ? "sticker-pin is-selected" : "sticker-pin";
     pin.style.left = `${(sticker.x ?? 0.88) * 100}%`;
     pin.style.top = `${(sticker.y ?? 0.88) * 100}%`;
     pin.style.width = `${(sticker.scale ?? 0.22) * 100}%`;
@@ -461,10 +467,27 @@ function renderStickerLayer() {
     });
     pin.append(remove);
 
+    pin.addEventListener("pointerdown", () => {
+      state.selectedSticker = index;
+      syncScaleControl();
+      renderStickerLayer();
+    });
+
     attachDrag(pin, index);
     return pin;
   });
   layer.replaceChildren(...pins);
+}
+
+function syncScaleControl() {
+  const sticker = state.stickers[state.selectedSticker];
+  const row = elements.stickerScale?.closest(".sticker-scale-row");
+  if (!row) return;
+  row.hidden = !sticker;
+  if (!sticker) return;
+  const percent = Math.round((sticker.scale ?? 0.22) * 100);
+  if (elements.stickerScale) elements.stickerScale.value = String(percent);
+  if (elements.stickerScaleValue) elements.stickerScaleValue.textContent = `${percent}%`;
 }
 
 function attachDrag(pin, index) {
@@ -838,6 +861,19 @@ async function boot() {
   if (elements.stickerRemove) elements.stickerRemove.addEventListener("click", removeAllStickers);
   refreshStickerUi();
   ensureThumbs();
+  if (elements.stickerScale) {
+    elements.stickerScale.addEventListener("input", (event) => {
+      const sticker = state.stickers[state.selectedSticker];
+      if (!sticker) return;
+      sticker.scale = Number(event.target.value) / 100;
+      if (elements.stickerScaleValue) {
+        elements.stickerScaleValue.textContent = `${event.target.value}%`;
+      }
+      renderStickerLayer();
+      saveStickers();
+      schedulePreview();
+    });
+  }
   try {
     state.manifest = readInlineManifest() || (await fetchManifest());
     if (!state.manifest || !Array.isArray(state.manifest.slots) || !state.manifest.slots.length) {

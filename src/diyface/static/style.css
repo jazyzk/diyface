@@ -248,14 +248,15 @@ a {
 
 .preview-canvas {
   position: relative;
-  display: inline-block;
+  display: block;
+  width: min(360px, 100%);
+  margin: 0 auto;
   line-height: 0;
-  max-width: 100%;
 }
 
 .preview-canvas #preview {
   display: block;
-  width: min(360px, 100%);
+  width: 100%;
   height: auto;
   border-radius: 12px;
 }
@@ -307,6 +308,22 @@ a {
 }
 
 .sticker-pin:hover .sticker-del { opacity: 1; }
+
+.sticker-scale-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sticker-scale-row input { flex: 1; }
+
+.sticker-pin.is-selected {
+  border: 1px solid rgba(59, 110, 245, .9);
+  background: rgba(59, 110, 245, .06);
+}
 
 .preview-card {
   position: relative;
@@ -621,14 +638,15 @@ kbd {
 
   .preview-canvas {
   position: relative;
-  display: inline-block;
+  display: block;
+  width: min(360px, 100%);
+  margin: 0 auto;
   line-height: 0;
-  max-width: 100%;
 }
 
 .preview-canvas #preview {
   display: block;
-  width: min(360px, 100%);
+  width: 100%;
   height: auto;
   border-radius: 12px;
 }
@@ -680,6 +698,22 @@ kbd {
 }
 
 .sticker-pin:hover .sticker-del { opacity: 1; }
+
+.sticker-scale-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sticker-scale-row input { flex: 1; }
+
+.sticker-pin.is-selected {
+  border: 1px solid rgba(59, 110, 245, .9);
+  background: rgba(59, 110, 245, .06);
+}
 
 .preview-card {
     max-width: min(420px, 100%);

@@ -83,6 +83,11 @@
         <section class="control-group">
           <h2 class="panel-title">拼豆贴纸</h2>
           <p id="sticker-status" class="muted">还没有拼豆贴纸</p>
+          <label class="sticker-scale-row" for="sticker-scale" hidden>
+            <span>大小</span>
+            <input id="sticker-scale" type="range" min="6" max="60" step="1" value="22">
+            <span id="sticker-scale-value">22%</span>
+          </label>
           <a class="action action-ghost" href="/pixel" role="button">去画一张</a>
           <button id="sticker-remove" type="button" class="action action-ghost" hidden>
             移除贴纸
