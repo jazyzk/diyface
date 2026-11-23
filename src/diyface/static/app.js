@@ -30,7 +30,11 @@ const elements = {
   share: element("share"),
   reset: element("reset"),
   toast: element("toast"),
+  stickerStatus: element("sticker-status"),
+  stickerRemove: element("sticker-remove"),
 };
+
+const STICKER_KEY = "diyface.sticker.v1";
 
 const state = {
   manifest: null,
@@ -353,6 +357,34 @@ function handleColorInput(event) {
 /* 预览                                                                */
 /* ------------------------------------------------------------------ */
 
+function readSticker() {
+  try {
+    const raw = localStorage.getItem(STICKER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function refreshStickerUi() {
+  const box = elements.stickerStatus;
+  if (!box) return;
+  box.textContent = state.sticker ? "已贴上拼豆贴纸" : "还没有拼豆贴纸";
+  if (elements.stickerRemove) elements.stickerRemove.hidden = !state.sticker;
+}
+
+function clearSticker() {
+  state.sticker = null;
+  try {
+    localStorage.removeItem(STICKER_KEY);
+  } catch (error) {
+    /* ignore */
+  }
+  refreshStickerUi();
+  schedulePreview();
+  toast("已移除拼豆贴纸");
+}
+
 function schedulePreview() {
   clearTimeout(state.debounceTimer);
   state.debounceTimer = window.setTimeout(refreshPreview, PREVIEW_DEBOUNCE_MS);
@@ -372,7 +404,7 @@ async function refreshPreview() {
     const response = await fetch("/api/render", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "image/png" },
-      body: JSON.stringify({ recipe: state.recipe, size: 256 }),
+      body: JSON.stringify({ recipe: state.recipe, size: 256, sticker: state.sticker || undefined }),
       signal: controller.signal,
     });
     if (!response.ok) throw new Error(await describeError(response));
@@ -485,7 +517,7 @@ async function download(size) {
     const response = await fetch("/api/render", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "image/png" },
-      body: JSON.stringify({ recipe: state.recipe, size }),
+      body: JSON.stringify({ recipe: state.recipe, size, sticker: state.sticker || undefined }),
     });
     if (!response.ok) throw new Error(await describeError(response));
 
@@ -691,6 +723,9 @@ function wireEvents() {
 }
 
 async function boot() {
+  state.sticker = readSticker();
+  if (elements.stickerRemove) elements.stickerRemove.addEventListener("click", clearSticker);
+  refreshStickerUi();
   try {
     state.manifest = readInlineManifest() || (await fetchManifest());
     if (!state.manifest || !Array.isArray(state.manifest.slots) || !state.manifest.slots.length) {

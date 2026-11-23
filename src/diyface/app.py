@@ -24,6 +24,7 @@ from .randomizer import random_recipe
 from .pixel import CANVAS, PixelArt, PixelError, decode
 from .pixel import render as render_pixel
 from .render import SIZES, render
+from .sticker import build as build_sticker
 
 BASE_DIR = Path(__file__).parent
 PROJECT_ROOT = BASE_DIR.parents[1]
@@ -186,8 +187,21 @@ def api_render():
     if not isinstance(size, int) or isinstance(size, bool) or size not in SIZES:
         return error(422, "BAD_SIZE", f"size 只能是 {SIZES} 之一", field="size")
 
+    sticker = None
+    raw_sticker = payload.get("sticker")
+    if raw_sticker is not None:
+        try:
+            cells = decode((raw_sticker or {}).get("pixels", ""))
+            art = PixelArt(
+                palette=(raw_sticker or {}).get("palette") or [],
+                cells=cells,
+            )
+            sticker = build_sticker(art, str((raw_sticker or {}).get("style", "bead")))
+        except (PixelError, AttributeError) as exc:
+            return error(422, "INVALID_REQUEST", str(exc), field="sticker")
+
     try:
-        png = render(recipe, load_catalog(), size)
+        png = render(recipe, load_catalog(), size, sticker=sticker)
     except KeyError as exc:
         return error(422, "UNKNOWN_ASSET", str(exc), field="recipe")
 

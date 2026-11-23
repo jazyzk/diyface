@@ -193,3 +193,31 @@ def test_pixel_render_rejects_bad_size() -> None:
 
     assert response.status == 422
     assert response.json["error"]["code"] == "BAD_SIZE"
+
+
+def test_render_accepts_pixel_sticker() -> None:
+    recipe = http_client.call(app, "GET", "/api/recipe/default").json
+    body = {
+        "recipe": recipe,
+        "size": 256,
+        "sticker": {"palette": ["#FF0000"], "pixels": "0x1024", "style": "bead"},
+    }
+
+    response = http_client.call(app, "POST", "/api/render", json_body=body)
+
+    assert response.status == 200
+    assert response.body.startswith(b"\x89PNG")
+    assert len(response.body) > len(
+        http_client.call(app, "POST", "/api/render", json_body={"recipe": recipe, "size": 256}).body
+    ), "带贴纸的图应当更大（右下角多了一块）"
+
+
+def test_render_rejects_bad_sticker() -> None:
+    recipe = http_client.call(app, "GET", "/api/recipe/default").json
+    body = {"recipe": recipe, "size": 256, "sticker": {"palette": [], "pixels": "nope"}}
+
+    response = http_client.call(app, "POST", "/api/render", json_body=body)
+
+    assert response.status == 422
+    assert response.json["error"]["code"] == "INVALID_REQUEST"
+    assert response.json["error"]["field"] == "sticker"

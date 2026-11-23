@@ -300,6 +300,18 @@ document.getElementById("share").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("to-avatar").addEventListener("click", () => {
+  try {
+    localStorage.setItem(
+      "diyface.sticker.v1",
+      JSON.stringify({ palette: PALETTE, pixels: encode(), style: state.style })
+    );
+    location.href = "/?sticker=1";
+  } catch (error) {
+    say("浏览器存储不可用，无法传给头像页");
+  }
+});
+
 window.addEventListener("keydown", (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
     event.preventDefault();

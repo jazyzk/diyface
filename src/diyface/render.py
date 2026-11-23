@@ -14,6 +14,7 @@ from PIL import Image
 from .catalog import Asset
 from .models import AvatarRecipe, SLOTS_BY_Z, SlotId
 from .palettes import tint
+from .sticker import attach as attach_sticker
 
 CANVAS = 1024
 SIZES = (256, 1024)
@@ -51,12 +52,15 @@ def render(
     recipe: AvatarRecipe,
     catalog: dict[SlotId, dict[str, Asset]],
     size: int = 256,
+    sticker: Image.Image | None = None,
 ) -> bytes:
-    """合成并按指定尺寸输出 PNG 字节串。"""
+    """合成并按指定尺寸输出 PNG 字节串；`sticker` 会贴在右下角。"""
     if size not in SIZES:
         raise ValueError(f"size 只能是 {SIZES}，收到 {size}")
 
     image = compose(recipe, catalog)
+    if sticker is not None:
+        image = attach_sticker(image, sticker)
     if size != CANVAS:
         image = image.resize((size, size), Image.LANCZOS)
 
