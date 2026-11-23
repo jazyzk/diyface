@@ -278,10 +278,10 @@ a {
 
 .sticker-pin:active { cursor: grabbing; }
 .sticker-pin {
-  border: 1px dashed transparent;
+  border: 1.5px dashed transparent;
   border-radius: 8px;
   background: transparent;
-  min-height: 24px;
+  aspect-ratio: 1;
 }
 
 .sticker-pin:hover {
@@ -668,10 +668,10 @@ kbd {
 
 .sticker-pin:active { cursor: grabbing; }
 .sticker-pin {
-  border: 1px dashed transparent;
+  border: 1.5px dashed transparent;
   border-radius: 8px;
   background: transparent;
-  min-height: 24px;
+  aspect-ratio: 1;
 }
 
 .sticker-pin:hover {

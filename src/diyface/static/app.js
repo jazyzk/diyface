@@ -423,13 +423,39 @@ async function stickerThumb(sticker) {
   });
   if (!response.ok) return null;
   const blob = await response.blob();
-  return URL.createObjectURL(blob);
+  try {
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(bitmap, 0, 0);
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let minX = canvas.width;
+    let minY = canvas.height;
+    let maxX = 0;
+    let maxY = 0;
+    for (let y = 0; y < canvas.height; y += 1) {
+      for (let x = 0; x < canvas.width; x += 1) {
+        if (data[(y * canvas.width + x) * 4 + 3] > 8) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    sticker.aspect = (maxX - minX + 1) / (maxY - minY + 1);
+  } catch (error) {
+    sticker.aspect = 1;
+  }
+  return null;
 }
 
 async function ensureThumbs() {
   await Promise.all(
     state.stickers.map(async (sticker) => {
-      if (!sticker.thumb) sticker.thumb = await stickerThumb(sticker);
+      if (!sticker.aspect) await stickerThumb(sticker);
     })
   );
   renderStickerLayer();
@@ -445,12 +471,7 @@ function renderStickerLayer() {
     pin.style.top = `${(sticker.y ?? 0.88) * 100}%`;
     pin.style.width = `${(sticker.scale ?? 0.22) * 100}%`;
 
-    if (sticker.thumb) {
-      const image = document.createElement("img");
-      image.src = sticker.thumb;
-      image.alt = `拼豆贴纸 ${index + 1}`;
-      pin.append(image);
-    }
+    if (sticker.aspect) pin.style.aspectRatio = String(sticker.aspect);
 
     const remove = document.createElement("button");
     remove.type = "button";
