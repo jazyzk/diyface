@@ -142,3 +142,14 @@ def test_frontend_palette_matches_share_palette() -> None:
     assert len(canvas) == MAX_COLORS, "前端色板应当补满后端上限"
     assert canvas == shared, "两处调色板必须完全一致，否则分享链接会串色"
     assert len(canvas) <= MAX_COLORS, "前端色板不能超过后端上限"
+
+
+def test_white_uses_hama_style_code() -> None:
+    """白色必须显示 H2；H1 预留给透明格子。"""
+    from pathlib import Path as _Path
+
+    js = (_Path(__file__).resolve().parents[1] / "src" / "diyface" / "static" / "pixel.js").read_text(
+        encoding="utf-8"
+    )
+    assert "index === 0 ? \"H2\"" in js, "白色应映射为 H2"
+    assert "H${index + 2}" in js, "其余颜色按 H3 顺延"

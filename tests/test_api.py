@@ -155,7 +155,10 @@ def test_pixel_page_renders() -> None:
     response = http_client.call(app, "GET", "/pixel")
 
     assert response.status == 200
-    assert "拼豆画布" in response.body.decode("utf-8")
+    body = response.body.decode("utf-8")
+    assert "拼豆画布" in body
+    assert 'id="ruler-x"' in body, "需要横坐标标尺"
+    assert 'id="ruler-y"' in body, "需要纵坐标标尺"
 
 
 def test_pixel_render_returns_png() -> None:

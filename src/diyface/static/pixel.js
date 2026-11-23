@@ -16,6 +16,11 @@ const PALETTE = [
   "#7CC4A3", "#4CAF50", "#1B5E20", "#B2EBF2", "#4DD0E1", "#1565C0", "#0D1B4C", "#B39DDB",
 ];
 
+function colorCode(index) {
+  // H1 预留给「透明 / 空格子」，白色从 H2 开始
+  return index === 0 ? "H2" : `H${index + 2}`;
+}
+
 const state = {
   cells: new Array(GRID * GRID).fill(-1),
   color: 0,
@@ -82,6 +87,12 @@ function draw() {
   }
 }
 
+function updateCursorInfo(col, row) {
+  const box = document.getElementById("cursor-info");
+  if (!box) return;
+  box.textContent = col > 0 && row > 0 ? `列 ${col} · 行 ${row}` : "列 — · 行 —";
+}
+
 function cellFromEvent(event) {
   const rect = board.getBoundingClientRect();
   const x = ((event.clientX - rect.left) / rect.width) * DISPLAY;
@@ -126,11 +137,18 @@ board.addEventListener("pointerdown", (event) => {
   pushHistory();
   drawing = true;
   board.setPointerCapture(event.pointerId);
-  applyAt(cellFromEvent(event));
+  const index = cellFromEvent(event);
+  updateCursorInfo((index % GRID) + 1, Math.floor(index / GRID) + 1);
+  applyAt(index);
 });
 
 board.addEventListener("pointermove", (event) => {
-  if (!drawing || state.tool === "bucket") return;
+  if (!drawing) {
+    const index = cellFromEvent(event);
+    updateCursorInfo((index % GRID) + 1, Math.floor(index / GRID) + 1);
+    return;
+  }
+  if (state.tool === "bucket") return;
   applyAt(cellFromEvent(event));
 });
 
@@ -155,7 +173,22 @@ function readableInk(hex) {
 function updateColorInfo() {
   const box = document.getElementById("color-info");
   if (!box) return;
-  box.textContent = `当前：色号 ${String(state.color + 1).padStart(2, "0")} · ${PALETTE[state.color]}`;
+  box.textContent = `当前：色号 ${colorCode(state.color)} · ${PALETTE[state.color]}`;
+}
+
+function buildRulers() {
+  const x = document.getElementById("ruler-x");
+  const y = document.getElementById("ruler-y");
+  if (!x || !y) return;
+  const make = (count) =>
+    Array.from({ length: count }, (_, index) => {
+      const span = document.createElement("span");
+      span.textContent = String(index + 1);
+      if ((index + 1) % 4 === 0 || index === 0) span.classList.add("is-major");
+      return span;
+    });
+  x.replaceChildren(...make(GRID));
+  y.replaceChildren(...make(GRID));
 }
 
 function buildPalette() {
@@ -167,11 +200,11 @@ function buildPalette() {
     button.dataset.index = String(index);
     button.setAttribute("aria-label", `颜色 ${color}`);
     button.setAttribute("aria-pressed", String(index === state.color));
-    button.title = `色号 ${String(index + 1).padStart(2, "0")} · ${color}`;
+    button.title = `色号 ${colorCode(index)} · ${color}`;
 
     const code = document.createElement("span");
     code.className = "swatch-code";
-    code.textContent = String(index + 1).padStart(2, "0");
+    code.textContent = colorCode(index);
     code.style.color = readableInk(color);
     button.append(code);
 
@@ -368,6 +401,7 @@ window.addEventListener("keydown", (event) => {
 loadLocal();
 const shared = readShareParam();
 if (shared) state.cells = shared;
+buildRulers();
 buildPalette();
 draw();
 updateColorInfo();
