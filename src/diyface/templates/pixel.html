@@ -57,10 +57,27 @@
         box-shadow: 0 18px 40px rgba(31, 36, 48, .05);
       }
       .card h2 { margin: 0 0 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
-      .palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+      .palette { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
       .swatch {
+        position: relative;
         aspect-ratio: 1; border-radius: 8px; border: 2px solid transparent;
         cursor: pointer; padding: 0;
+      }
+      .swatch-code {
+        position: absolute;
+        right: 3px;
+        bottom: 1px;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1;
+        pointer-events: none;
+        letter-spacing: .2px;
+      }
+      .color-info {
+        margin: 10px 0 0;
+        font-size: 13px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
       }
       .swatch[aria-pressed="true"] { border-color: var(--ink); }
       .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -96,6 +113,7 @@
         <div class="card">
           <h2>颜色</h2>
           <div class="palette" id="palette"></div>
+          <p class="color-info" id="color-info"></p>
         </div>
 
         <div class="card">

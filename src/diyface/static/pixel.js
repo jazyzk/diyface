@@ -12,6 +12,8 @@ const PALETTE = [
   "#9B59B6", "#E84393", "#95A5A6", "#7F8C8D", "#D35400", "#2C3E50",
   "#FAFAFA", "#E0E0E0", "#BDBDBD", "#9E9E9E", "#616161", "#3E2723", "#D7CCC8", "#BCAAA4", "#FFCDD2", "#FF8A80", "#FF5252", "#D50000",
   "#FFD180", "#FFAB40", "#FF6D00", "#E65100", "#FFF59D", "#C6FF00", "#76FF03", "#00E676", "#18FFFF", "#2962FF", "#AA00FF", "#FF4081",
+  "#FFFFFF", "#F5F0E6", "#E6D3B3", "#C9A66B", "#A97142", "#6F4E37", "#2F2A26", "#0F0F10",
+  "#7CC4A3", "#4CAF50", "#1B5E20", "#B2EBF2", "#4DD0E1", "#1565C0", "#0D1B4C", "#B39DDB",
 ];
 
 const state = {
@@ -142,6 +144,20 @@ board.addEventListener("pointerleave", endDraw);
 
 /* ---------------------------- 调色板 / 工具 ---------------------------- */
 
+function readableInk(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.62 ? "rgba(15, 15, 16, .75)" : "rgba(255, 255, 255, .9)";
+}
+
+function updateColorInfo() {
+  const box = document.getElementById("color-info");
+  if (!box) return;
+  box.textContent = `当前：色号 ${String(state.color + 1).padStart(2, "0")} · ${PALETTE[state.color]}`;
+}
+
 function buildPalette() {
   const buttons = PALETTE.map((color, index) => {
     const button = document.createElement("button");
@@ -151,10 +167,19 @@ function buildPalette() {
     button.dataset.index = String(index);
     button.setAttribute("aria-label", `颜色 ${color}`);
     button.setAttribute("aria-pressed", String(index === state.color));
+    button.title = `色号 ${String(index + 1).padStart(2, "0")} · ${color}`;
+
+    const code = document.createElement("span");
+    code.className = "swatch-code";
+    code.textContent = String(index + 1).padStart(2, "0");
+    code.style.color = readableInk(color);
+    button.append(code);
+
     button.addEventListener("click", () => {
       state.color = index;
       if (state.tool === "eraser") setTool("pen");
       syncPalette();
+      updateColorInfo();
     });
     return button;
   });
@@ -162,6 +187,7 @@ function buildPalette() {
 }
 
 function syncPalette() {
+  updateColorInfo();
   for (const button of paletteBox.querySelectorAll(".swatch")) {
     button.setAttribute("aria-pressed", String(Number(button.dataset.index) === state.color));
   }
@@ -344,4 +370,5 @@ const shared = readShareParam();
 if (shared) state.cells = shared;
 buildPalette();
 draw();
+updateColorInfo();
 say(shared ? "已载入分享的画布" : "");

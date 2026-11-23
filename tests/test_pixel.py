@@ -110,8 +110,8 @@ def test_thumbnail_keeps_crisp_edges() -> None:
 
 
 def test_palette_is_rich_enough() -> None:
-    """拼豆色板要够丰富，至少 48 色。"""
-    assert MAX_COLORS >= 48
+    """拼豆色板要够丰富，补满上限。"""
+    assert MAX_COLORS >= 64
 
 
 def test_render_accepts_full_palette() -> None:
@@ -139,6 +139,6 @@ def test_frontend_palette_matches_share_palette() -> None:
 
     canvas = colors("pixel.js")
     shared = colors("app.js")
-    assert len(canvas) >= 48, "拼豆色板至少 48 色"
+    assert len(canvas) == MAX_COLORS, "前端色板应当补满后端上限"
     assert canvas == shared, "两处调色板必须完全一致，否则分享链接会串色"
     assert len(canvas) <= MAX_COLORS, "前端色板不能超过后端上限"
