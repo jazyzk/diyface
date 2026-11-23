@@ -65,6 +65,7 @@ python -m diyface render tests/fixtures/recipes/base.json --out out.png
 | `src/diyface/guide.py` | 画素材用的参考线图 |
 | `src/diyface/bench.py` | 渲染耗时测量 |
 | `src/diyface/pixel.py` | 32×32 拼豆画布：RLE 编解码与 PNG 渲染 |
+| `src/diyface/mard.py` | Mard 官方色卡 64 色（色号 + 色值），前端色板的来源 |
 | `src/diyface/sticker.py` | 拼豆图裁切缩放，贴到头像右下角 |
 | `src/diyface/app.py` | Flask 路由：首页、清单、渲染、随机、拼豆、健康检查 |
 | `src/diyface/__main__.py` | CLI：`render` / `verify` / `build-thumbs` |

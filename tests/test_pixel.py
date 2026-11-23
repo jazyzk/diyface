@@ -144,12 +144,31 @@ def test_frontend_palette_matches_share_palette() -> None:
     assert len(canvas) <= MAX_COLORS, "前端色板不能超过后端上限"
 
 
-def test_white_uses_hama_style_code() -> None:
-    """白色必须显示 H2；H1 预留给透明格子。"""
+def test_mard_white_is_h2() -> None:
+    """Mard 色卡里白色就是 H2，和实物一致。"""
+    from diyface.mard import MARD_64
+
+    assert MARD_64[0] == ("H2", "#FFFFFF")
+
+
+def test_mard_palette_is_single_source_of_truth() -> None:
+    """前端两份色板必须与 mard.py 完全一致，色号也不能漂移。"""
+    import re
     from pathlib import Path as _Path
 
-    js = (_Path(__file__).resolve().parents[1] / "src" / "diyface" / "static" / "pixel.js").read_text(
-        encoding="utf-8"
-    )
-    assert "index === 0 ? \"H2\"" in js, "白色应映射为 H2"
-    assert "H${index + 2}" in js, "其余颜色按 H3 顺延"
+    from diyface.mard import CODES, HEXES
+
+    root = _Path(__file__).resolve().parents[1] / "src" / "diyface" / "static"
+    assert len(HEXES) == MAX_COLORS == 64
+    assert len(set(CODES)) == 64, "色号不能重复"
+
+    pixel = (root / "pixel.js").read_text(encoding="utf-8")
+    app = (root / "app.js").read_text(encoding="utf-8")
+
+    palette = re.search(r"const PALETTE = \[(.*?)\];", pixel, re.S).group(1)
+    codes = re.search(r"const CODES = \[(.*?)\];", pixel, re.S).group(1)
+    shared = re.search(r"const STANDARD_PALETTE = \[(.*?)\];", app, re.S).group(1)
+
+    assert re.findall(r"#[0-9A-F]{6}", palette) == HEXES
+    assert re.findall(r"#[0-9A-F]{6}", shared) == HEXES
+    assert re.findall(r"\"([A-Z]{1,2}[0-9]+)\"", codes) == CODES
