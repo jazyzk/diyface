@@ -26,6 +26,8 @@ from .pixel import render as render_pixel
 from .render import SIZES, render
 from .sticker import build as build_sticker
 
+MAX_STICKERS = 8
+
 BASE_DIR = Path(__file__).parent
 PROJECT_ROOT = BASE_DIR.parents[1]
 
@@ -187,21 +189,34 @@ def api_render():
     if not isinstance(size, int) or isinstance(size, bool) or size not in SIZES:
         return error(422, "BAD_SIZE", f"size 只能是 {SIZES} 之一", field="size")
 
-    sticker = None
-    raw_sticker = payload.get("sticker")
-    if raw_sticker is not None:
+    raw_list = payload.get("stickers")
+    if raw_list is None:
+        single = payload.get("sticker")
+        raw_list = [single] if single else []
+    if not isinstance(raw_list, list):
+        return error(422, "INVALID_REQUEST", "stickers 必须是数组", field="stickers")
+
+    stickers = []
+    for index, raw in enumerate(raw_list[:MAX_STICKERS]):
         try:
-            cells = decode((raw_sticker or {}).get("pixels", ""))
-            art = PixelArt(
-                palette=(raw_sticker or {}).get("palette") or [],
-                cells=cells,
-            )
-            sticker = build_sticker(art, str((raw_sticker or {}).get("style", "bead")))
+            cells = decode((raw or {}).get("pixels", ""))
+            art = PixelArt(palette=(raw or {}).get("palette") or [], cells=cells)
+            picture = build_sticker(art, str((raw or {}).get("style", "bead")))
         except (PixelError, AttributeError) as exc:
-            return error(422, "INVALID_REQUEST", str(exc), field="sticker")
+            return error(422, "INVALID_REQUEST", f"第 {index + 1} 张贴纸：{exc}", field="stickers")
+        if picture is None:
+            continue
+        stickers.append(
+            (
+                picture,
+                float((raw or {}).get("x", 0.88)),
+                float((raw or {}).get("y", 0.88)),
+                float((raw or {}).get("scale", 0.22)),
+            )
+        )
 
     try:
-        png = render(recipe, load_catalog(), size, sticker=sticker)
+        png = render(recipe, load_catalog(), size, stickers=stickers)
     except KeyError as exc:
         return error(422, "UNKNOWN_ASSET", str(exc), field="recipe")
 

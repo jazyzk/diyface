@@ -32,9 +32,11 @@ const elements = {
   toast: element("toast"),
   stickerStatus: element("sticker-status"),
   stickerRemove: element("sticker-remove"),
+  stickerLayer: element("sticker-layer"),
 };
 
-const STICKER_KEY = "diyface.sticker.v1";
+const STICKER_KEY = "diyface.stickers.v2";
+const LEGACY_STICKER_KEY = "diyface.sticker.v1";
 
 const state = {
   manifest: null,
@@ -357,32 +359,141 @@ function handleColorInput(event) {
 /* 预览                                                                */
 /* ------------------------------------------------------------------ */
 
-function readSticker() {
+function readStickers() {
   try {
     const raw = localStorage.getItem(STICKER_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) return list;
+    }
+    const legacy = localStorage.getItem(LEGACY_STICKER_KEY);
+    if (legacy) {
+      const one = JSON.parse(legacy);
+      if (one && one.pixels) return [{ ...one, x: 0.88, y: 0.88, scale: 0.22 }];
+    }
   } catch (error) {
-    return null;
+    /* ignore */
+  }
+  return [];
+}
+
+function saveStickers() {
+  try {
+    localStorage.setItem(STICKER_KEY, JSON.stringify(state.stickers));
+  } catch (error) {
+    /* ignore */
   }
 }
 
 function refreshStickerUi() {
-  const box = elements.stickerStatus;
-  if (!box) return;
-  box.textContent = state.sticker ? "已贴上拼豆贴纸" : "还没有拼豆贴纸";
-  if (elements.stickerRemove) elements.stickerRemove.hidden = !state.sticker;
+  const count = state.stickers.length;
+  if (elements.stickerStatus) {
+    elements.stickerStatus.textContent = count
+      ? `已贴 ${count} 张拼豆贴纸（拖动摆位置）`
+      : "还没有拼豆贴纸";
+  }
+  if (elements.stickerRemove) elements.stickerRemove.hidden = count === 0;
+  renderStickerLayer();
 }
 
-function clearSticker() {
-  state.sticker = null;
-  try {
-    localStorage.removeItem(STICKER_KEY);
-  } catch (error) {
-    /* ignore */
-  }
+function removeAllStickers() {
+  state.stickers = [];
+  saveStickers();
   refreshStickerUi();
   schedulePreview();
-  toast("已移除拼豆贴纸");
+  toast("已移除全部贴纸");
+}
+
+async function stickerThumb(sticker) {
+  const response = await fetch("/api/pixel/render", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      palette: sticker.palette,
+      pixels: sticker.pixels,
+      style: sticker.style || "bead",
+      size: 256,
+    }),
+  });
+  if (!response.ok) return null;
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
+async function ensureThumbs() {
+  await Promise.all(
+    state.stickers.map(async (sticker) => {
+      if (!sticker.thumb) sticker.thumb = await stickerThumb(sticker);
+    })
+  );
+  renderStickerLayer();
+}
+
+function renderStickerLayer() {
+  const layer = elements.stickerLayer;
+  if (!layer) return;
+  const pins = state.stickers.map((sticker, index) => {
+    const pin = document.createElement("div");
+    pin.className = "sticker-pin";
+    pin.style.left = `${(sticker.x ?? 0.88) * 100}%`;
+    pin.style.top = `${(sticker.y ?? 0.88) * 100}%`;
+    pin.style.width = `${(sticker.scale ?? 0.22) * 100}%`;
+
+    if (sticker.thumb) {
+      const image = document.createElement("img");
+      image.src = sticker.thumb;
+      image.alt = `拼豆贴纸 ${index + 1}`;
+      pin.append(image);
+    }
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "sticker-del";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", `删除第 ${index + 1} 张贴纸`);
+    remove.addEventListener("pointerdown", (event) => event.stopPropagation());
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation();
+      state.stickers.splice(index, 1);
+      saveStickers();
+      refreshStickerUi();
+      schedulePreview();
+    });
+    pin.append(remove);
+
+    attachDrag(pin, index);
+    return pin;
+  });
+  layer.replaceChildren(...pins);
+}
+
+function attachDrag(pin, index) {
+  let dragging = false;
+  pin.addEventListener("pointerdown", (event) => {
+    if (event.target.classList.contains("sticker-del")) return;
+    event.preventDefault();
+    dragging = true;
+    pin.setPointerCapture(event.pointerId);
+  });
+  pin.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    const canvas = document.getElementById("preview-canvas");
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.min(0.98, Math.max(0.02, (event.clientX - rect.left) / rect.width));
+    const y = Math.min(0.98, Math.max(0.02, (event.clientY - rect.top) / rect.height));
+    state.stickers[index].x = x;
+    state.stickers[index].y = y;
+    pin.style.left = `${x * 100}%`;
+    pin.style.top = `${y * 100}%`;
+  });
+  function end(event) {
+    if (!dragging) return;
+    dragging = false;
+    saveStickers();
+    schedulePreview();
+  }
+  pin.addEventListener("pointerup", end);
+  pin.addEventListener("pointercancel", end);
 }
 
 function schedulePreview() {
@@ -404,7 +515,7 @@ async function refreshPreview() {
     const response = await fetch("/api/render", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "image/png" },
-      body: JSON.stringify({ recipe: state.recipe, size: 256, sticker: state.sticker || undefined }),
+      body: JSON.stringify({ recipe: state.recipe, size: 256, stickers: state.stickers.length ? state.stickers.map(({ palette, pixels, style, x, y, scale }) => ({ palette, pixels, style, x, y, scale })) : undefined }),
       signal: controller.signal,
     });
     if (!response.ok) throw new Error(await describeError(response));
@@ -517,7 +628,7 @@ async function download(size) {
     const response = await fetch("/api/render", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "image/png" },
-      body: JSON.stringify({ recipe: state.recipe, size, sticker: state.sticker || undefined }),
+      body: JSON.stringify({ recipe: state.recipe, size, stickers: state.stickers.length ? state.stickers.map(({ palette, pixels, style, x, y, scale }) => ({ palette, pixels, style, x, y, scale })) : undefined }),
     });
     if (!response.ok) throw new Error(await describeError(response));
 
@@ -723,9 +834,10 @@ function wireEvents() {
 }
 
 async function boot() {
-  state.sticker = readSticker();
-  if (elements.stickerRemove) elements.stickerRemove.addEventListener("click", clearSticker);
+  state.stickers = readStickers();
+  if (elements.stickerRemove) elements.stickerRemove.addEventListener("click", removeAllStickers);
   refreshStickerUi();
+  ensureThumbs();
   try {
     state.manifest = readInlineManifest() || (await fetchManifest());
     if (!state.manifest || !Array.isArray(state.manifest.slots) || !state.manifest.slots.length) {

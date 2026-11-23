@@ -301,11 +301,23 @@ document.getElementById("share").addEventListener("click", async () => {
 });
 
 document.getElementById("to-avatar").addEventListener("click", () => {
+  const KEY = "diyface.stickers.v2";
   try {
-    localStorage.setItem(
-      "diyface.sticker.v1",
-      JSON.stringify({ palette: PALETTE, pixels: encode(), style: state.style })
-    );
+    let list = [];
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) list = parsed;
+    }
+    list.push({
+      palette: PALETTE,
+      pixels: encode(),
+      style: state.style,
+      x: 0.85,
+      y: 0.85,
+      scale: 0.22,
+    });
+    localStorage.setItem(KEY, JSON.stringify(list.slice(-8)));
     location.href = "/?sticker=1";
   } catch (error) {
     say("浏览器存储不可用，无法传给头像页");

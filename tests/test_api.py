@@ -220,4 +220,4 @@ def test_render_rejects_bad_sticker() -> None:
 
     assert response.status == 422
     assert response.json["error"]["code"] == "INVALID_REQUEST"
-    assert response.json["error"]["field"] == "sticker"
+    assert response.json["error"]["field"] in {"sticker", "stickers"}

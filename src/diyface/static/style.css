@@ -246,6 +246,68 @@ a {
   min-width: 0;
 }
 
+.preview-canvas {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+}
+
+.preview-canvas #preview {
+  display: block;
+  width: min(360px, 100%);
+  height: auto;
+  border-radius: 12px;
+}
+
+.sticker-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sticker-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .25));
+}
+
+.sticker-pin:active { cursor: grabbing; }
+.sticker-pin {
+  border: 1px dashed transparent;
+  border-radius: 8px;
+  background: transparent;
+  min-height: 24px;
+}
+
+.sticker-pin:hover {
+  border-color: rgba(59, 110, 245, .85);
+  background: rgba(59, 110, 245, .08);
+}
+
+.sticker-del {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 0;
+  background: #1f2430;
+  color: #fff;
+  font-size: 14px;
+  line-height: 22px;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+
+.sticker-pin:hover .sticker-del { opacity: 1; }
+
 .preview-card {
   position: relative;
   display: grid;
@@ -557,7 +619,69 @@ kbd {
     background: var(--paper);
   }
 
-  .preview-card {
+  .preview-canvas {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+}
+
+.preview-canvas #preview {
+  display: block;
+  width: min(360px, 100%);
+  height: auto;
+  border-radius: 12px;
+}
+
+.sticker-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sticker-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .25));
+}
+
+.sticker-pin:active { cursor: grabbing; }
+.sticker-pin {
+  border: 1px dashed transparent;
+  border-radius: 8px;
+  background: transparent;
+  min-height: 24px;
+}
+
+.sticker-pin:hover {
+  border-color: rgba(59, 110, 245, .85);
+  background: rgba(59, 110, 245, .08);
+}
+
+.sticker-del {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 0;
+  background: #1f2430;
+  color: #fff;
+  font-size: 14px;
+  line-height: 22px;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+
+.sticker-pin:hover .sticker-del { opacity: 1; }
+
+.preview-card {
     max-width: min(420px, 100%);
   }
 

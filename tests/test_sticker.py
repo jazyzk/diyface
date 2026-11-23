@@ -5,7 +5,7 @@ from __future__ import annotations
 from PIL import Image
 
 from diyface.pixel import CANVAS, CELL, GRID, PixelArt
-from diyface.sticker import STICKER_RATIO, attach, build
+from diyface.sticker import DEFAULT_SCALE, attach, build, place
 
 
 def blank() -> PixelArt:
@@ -56,4 +56,26 @@ def test_attach_scales_to_ratio() -> None:
     bbox = result.getchannel("A").getbbox()
     assert bbox is not None
     width = bbox[2] - bbox[0]
-    assert abs(width - int(CANVAS * STICKER_RATIO)) <= 2, "宽度应缩放到画布的 28%"
+    assert abs(width - int(CANVAS * DEFAULT_SCALE)) <= 2, "宽度应缩放到默认比例"
+
+
+def test_place_uses_normalised_coordinates() -> None:
+    canvas = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
+    sticker = Image.new("RGBA", (100, 100), (255, 0, 0, 255))
+
+    result = place(canvas, sticker, x=0.25, y=0.25, scale=0.2)
+
+    assert result.getpixel((int(CANVAS * 0.25), int(CANVAS * 0.25)))[:3] == (255, 0, 0)
+    assert result.getpixel((int(CANVAS * 0.75), int(CANVAS * 0.75)))[3] == 0
+
+
+def test_place_clamps_sticker_inside_canvas() -> None:
+    canvas = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
+    sticker = Image.new("RGBA", (100, 100), (255, 0, 0, 255))
+
+    result = place(canvas, sticker, x=0.99, y=0.01, scale=0.3)
+
+    bbox = result.getchannel("A").getbbox()
+    assert bbox is not None
+    assert 0 <= bbox[0] and bbox[2] <= CANVAS
+    assert 0 <= bbox[1] and bbox[3] <= CANVAS
