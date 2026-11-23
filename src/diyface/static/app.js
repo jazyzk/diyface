@@ -167,8 +167,9 @@ function loadInitialRecipe(manifest) {
 
 function dropShareParam() {
   const url = new URL(location.href);
-  if (!url.searchParams.has("r")) return;
+  if (!url.searchParams.has("r") && !url.searchParams.has("s")) return;
   url.searchParams.delete("r");
+  url.searchParams.delete("s");
   history.replaceState(null, "", url.toString());
 }
 
@@ -697,6 +698,68 @@ async function download(size) {
   }
 }
 
+const STANDARD_PALETTE = [
+  "#FFFFFF", "#F2D5B8", "#E8B98A", "#C68B59", "#8B5A2B", "#5C3A21",
+  "#1F2430", "#6B7280", "#C0392B", "#E74C3C", "#F39C12", "#F1C40F",
+  "#27AE60", "#2ECC71", "#16A085", "#2980B9", "#3498DB", "#8E44AD",
+  "#9B59B6", "#E84393", "#95A5A6", "#7F8C8D", "#D35400", "#2C3E50",
+];
+
+function toBase64Url(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(token) {
+  const base64 = token.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+function encodeStickers() {
+  if (!state.stickers.length) return "";
+  const same = (list) =>
+    Array.isArray(list) && list.length === STANDARD_PALETTE.length &&
+    list.every((color, index) => color.toUpperCase() === STANDARD_PALETTE[index]);
+
+  const payload = state.stickers.map((sticker) => {
+    const item = {
+      p: sticker.pixels,
+      st: sticker.style || "bead",
+      x: Number((sticker.x ?? 0.88).toFixed(3)),
+      y: Number((sticker.y ?? 0.88).toFixed(3)),
+      sc: Number((sticker.scale ?? 0.22).toFixed(3)),
+    };
+    if (!same(sticker.palette)) item.pal = sticker.palette;
+    return item;
+  });
+  return toBase64Url(JSON.stringify(payload));
+}
+
+function decodeStickers(token) {
+  try {
+    const list = JSON.parse(fromBase64Url(token));
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((item) => item && typeof item.p === "string")
+      .map((item) => ({
+        pixels: item.p,
+        style: item.st === "flat" ? "flat" : "bead",
+        palette: Array.isArray(item.pal) ? item.pal : STANDARD_PALETTE,
+        x: Number(item.x ?? 0.88),
+        y: Number(item.y ?? 0.88),
+        scale: Number(item.sc ?? 0.22),
+      }))
+      .slice(0, 8);
+  } catch (error) {
+    return [];
+  }
+}
+
 function encodeRecipe(recipe) {
   const json = JSON.stringify(recipe);
   const bytes = new TextEncoder().encode(json);
@@ -740,6 +803,9 @@ async function copyText(text) {
 async function shareLink() {
   const url = new URL(location.href);
   url.searchParams.set("r", encodeRecipe(state.recipe));
+  const stickers = encodeStickers();
+  if (stickers) url.searchParams.set("s", stickers);
+  else url.searchParams.delete("s");
   url.hash = "";
   history.replaceState(null, "", url.toString());
 
@@ -882,6 +948,14 @@ function wireEvents() {
 
 async function boot() {
   state.stickers = readStickers();
+  const sharedStickers = new URLSearchParams(location.search).get("s");
+  if (sharedStickers) {
+    const decoded = decodeStickers(sharedStickers);
+    if (decoded.length) {
+      state.stickers = decoded;
+      saveStickers();
+    }
+  }
   if (elements.stickerRemove) elements.stickerRemove.addEventListener("click", removeAllStickers);
   refreshStickerUi();
   ensureThumbs();
