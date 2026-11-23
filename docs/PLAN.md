@@ -113,24 +113,13 @@ CREATE INDEX idx_works_created ON works(created_at DESC);
 
 | 槽位 | 数量 | 内容 |
 | --- | --- | --- |
-| skin | 9 | 标准、圆脸、瓜子脸、方脸、长脸、宽脸、婴儿肥、心形脸、窄脸（可换 6 种肤色） |
+| skin | 2 | 标准脸、窄脸（可换 6 种肤色） |
 | hair | 15 | 短发、波波头、长发、丸子头、马尾、卷发、爆炸头、秃头、飞机头 |
 | eyes | 24 | 20 款库内眼睛 + 4 款自绘高光眼 |
 | brows | 4 | 平眉、弯眉、挑眉、粗眉 |
 | mouth | 17 | 库内嘴型全量导出，覆盖微笑/露齿/撇嘴/吐舌等 |
 | glasses | 5 | 圆框、方框、墨镜、半框、护目镜 |
-| 合计 | 74 | 本期只做面部 |
-
-素材重建顺序（导入脚本会清空目录，务必按序执行）：
-
-```powershell
-python scripts/import_adventurer.py   # 基础素材
-python scripts/face_shapes.py         # 由底脸派生 8 种脸型
-python scripts/custom_hair.py         # 自绘发型
-python scripts/custom_eyes.py         # 自绘高光眼
-python -m diyface build-thumbs        # 缩略图
-python -m diyface verify              # 规格校验
-```
+| 合计 | 67 | 本期只做面部 |
 
 素材规格：1024×1024、RGBA、透明背景，命名 `<槽位>_<形状>_<两位序号>.png`，单张 ≤ 80KB。
 对齐基线：头顶 y=170、眼睛 y=460、脸中心 y=500、嘴 y=620、肩线 y=880。
