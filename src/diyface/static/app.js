@@ -468,9 +468,12 @@ function renderStickerLayer() {
     pin.append(remove);
 
     pin.addEventListener("pointerdown", () => {
+      // 只切高亮，不能重建 DOM，否则拖拽会立刻失焦
       state.selectedSticker = index;
+      for (const item of layer.querySelectorAll(".sticker-pin")) {
+        item.classList.toggle("is-selected", item === pin);
+      }
       syncScaleControl();
-      renderStickerLayer();
     });
 
     attachDrag(pin, index);
