@@ -703,6 +703,8 @@ const STANDARD_PALETTE = [
   "#1F2430", "#6B7280", "#C0392B", "#E74C3C", "#F39C12", "#F1C40F",
   "#27AE60", "#2ECC71", "#16A085", "#2980B9", "#3498DB", "#8E44AD",
   "#9B59B6", "#E84393", "#95A5A6", "#7F8C8D", "#D35400", "#2C3E50",
+  "#FAFAFA", "#E0E0E0", "#BDBDBD", "#9E9E9E", "#616161", "#3E2723", "#D7CCC8", "#BCAAA4", "#FFCDD2", "#FF8A80", "#FF5252", "#D50000",
+  "#FFD180", "#FFAB40", "#FF6D00", "#E65100", "#FFF59D", "#C6FF00", "#76FF03", "#00E676", "#18FFFF", "#2962FF", "#AA00FF", "#FF4081",
 ];
 
 function toBase64Url(text) {

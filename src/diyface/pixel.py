@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw
 CANVAS = 1024
 GRID = 32
 CELL = CANVAS // GRID
-MAX_COLORS = 24
+MAX_COLORS = 64
 
 _HEX = re.compile(r"#[0-9A-Fa-f]{6}")
 _RUN = re.compile(r"(-?\d+)x(\d+)")

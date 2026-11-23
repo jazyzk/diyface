@@ -107,3 +107,38 @@ def test_thumbnail_keeps_crisp_edges() -> None:
 
     assert small.size == (64, 64)
     assert small.getpixel((32, 32))[:3] == (0, 255, 0)
+
+
+def test_palette_is_rich_enough() -> None:
+    """拼豆色板要够丰富，至少 48 色。"""
+    assert MAX_COLORS >= 48
+
+
+def test_render_accepts_full_palette() -> None:
+    palette = [f"#{index:06X}" for index in range(1, 49)]
+    art = PixelArt(palette=palette, cells=filled(47))
+
+    image = render(art, style="flat")
+
+    assert image.size == (CANVAS, CANVAS)
+
+
+def test_frontend_palette_matches_share_palette() -> None:
+    """拼豆页与分享编码用的是同一套颜色，顺序也必须一致。"""
+    import re
+    from pathlib import Path as _Path
+
+    root = _Path(__file__).resolve().parents[1] / "src" / "diyface" / "static"
+    pattern = re.compile(r"const (?:PALETTE|STANDARD_PALETTE) = \[(.*?)\];", re.S)
+
+    def colors(name: str) -> list[str]:
+        text = (root / name).read_text(encoding="utf-8")
+        block = pattern.search(text)
+        assert block, f"{name} 里找不到调色板定义"
+        return re.findall(r"#[0-9A-Fa-f]{6}", block.group(1))
+
+    canvas = colors("pixel.js")
+    shared = colors("app.js")
+    assert len(canvas) >= 48, "拼豆色板至少 48 色"
+    assert canvas == shared, "两处调色板必须完全一致，否则分享链接会串色"
+    assert len(canvas) <= MAX_COLORS, "前端色板不能超过后端上限"
