@@ -698,7 +698,7 @@ async function randomize() {
     const response = await fetch("/api/random", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ style: state.style || STYLE_FALLBACK }),
     });
     if (!response.ok) throw new Error(await describeError(response));
 

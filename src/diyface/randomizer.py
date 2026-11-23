@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import random
 
-from .catalog import Asset
+from .catalog import Asset, style_of
 from .models import ACTIVE, RESERVED, SLOTS, AvatarRecipe, SlotId
 
 #: 允许整个槽位留空（不戴眼镜、不戴帽子也不违和）。
@@ -23,8 +23,9 @@ SEED_LIMIT = 1_000_000
 def random_recipe(
     catalog: dict[SlotId, dict[str, Asset]],
     rng: random.Random | None = None,
+    style: str | None = None,
 ) -> AvatarRecipe:
-    """按素材表随机拼一份配方；可传入带种子的 Random 以便复现。"""
+    """按素材表随机拼一份配方；``style`` 给定时只在同一套风格里挑，避免混搭。"""
     rng = rng or random.Random()
 
     slots: dict[SlotId, str | None] = {}
@@ -32,6 +33,8 @@ def random_recipe(
 
     for slot in SLOTS:
         options = sorted(catalog.get(slot.id, {}))
+        if style:
+            options = [asset_id for asset_id in options if style_of(asset_id) == style]
         if slot.id in RESERVED or not options:
             slots[slot.id] = None
             continue

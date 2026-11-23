@@ -19,11 +19,11 @@ REQUIRED = [slot for slot in ACTIVE if slot.id not in OPTIONAL]
 def build_catalog(workdir: Path) -> dict:
     """每类造 2 张素材，确保随机有得选。"""
     layout = {
-        "01_skin": ["skin_base", "skin_slim"],
+        "01_skin": ["skin_base", "skin_slim", "lorelei_skin_01", "lorelei_skin_02"],
         "02_clothes": ["clothes_crew_01", "clothes_shirt_01"],
         "03_hair_back": ["hair_back_long_01", "hair_back_short_01"],
-        "04_hair": ["hair_straight_01", "hair_wavy_01"],
-        "05_eyes": ["eyes_round_01", "eyes_star_01"],
+        "04_hair": ["hair_straight_01", "hair_wavy_01", "lorelei_hair_01"],
+        "05_eyes": ["eyes_round_01", "eyes_star_01", "lorelei_eyes_01", "lorelei_eyes_02"],
         "06_brows": ["brows_soft_01", "brows_sharp_01"],
         "07_mouth": ["mouth_smile_01", "mouth_laugh_01"],
         "08_glasses": ["glasses_round_01", "glasses_sun_01"],
@@ -93,3 +93,21 @@ def test_colors_are_filled_for_active_slots(workdir: Path) -> None:
 
     for slot in ACTIVE:
         assert recipe.colors.get(slot.id, "").startswith("#")
+
+
+def test_random_never_mixes_styles(workdir: Path) -> None:
+    """随机不准把两套风格拼在一起。"""
+    from diyface.catalog import style_of
+
+    catalog = build_catalog(workdir)
+    for seed in range(30):
+        recipe = random_recipe(catalog, random.Random(seed), style="lorelei")
+        used = [asset_id for asset_id in recipe.slots.values() if asset_id]
+        assert used, "至少要有素材"
+        assert {style_of(asset_id) for asset_id in used} == {"lorelei"}
+
+
+def test_random_without_style_keeps_old_behaviour(workdir: Path) -> None:
+    recipe = random_recipe(build_catalog(workdir), random.Random(1))
+
+    assert recipe.slots["skin"]

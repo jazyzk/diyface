@@ -170,8 +170,13 @@ def api_default_recipe():
 def api_random():
     payload = request.get_json(silent=True) or {}
     seed = payload.get("seed")
+    style = payload.get("style")
     rng = random.Random(seed if isinstance(seed, int) else None)
-    return jsonify(random_recipe(load_catalog(), rng).model_dump(mode="json"))
+    return jsonify(
+        random_recipe(load_catalog(), rng, style=style if isinstance(style, str) else None).model_dump(
+            mode="json"
+        )
+    )
 
 
 @app.post("/api/render")
