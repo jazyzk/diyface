@@ -34,6 +34,7 @@ const elements = {
   stickerRemove: element("sticker-remove"),
   stickerLayer: element("sticker-layer"),
   styleTabs: element("style-tabs"),
+  backgrounds: element("backgrounds"),
   stickerScale: element("sticker-scale"),
   stickerScaleValue: element("sticker-scale-value"),
 };
@@ -149,6 +150,12 @@ function sanitizeRecipe(raw, manifest) {
     recipe.colors[slotId] =
       typeof value === "string" && HEX_COLOR.test(value) ? value.toUpperCase() : fallback;
   }
+
+  const backgrounds = new Set((manifest.backgrounds || []).map((item) => item.id));
+  recipe.background =
+    typeof candidate.background === "string" && backgrounds.has(candidate.background)
+      ? candidate.background
+      : null;
 
   if (Number.isInteger(candidate.seed)) recipe.seed = candidate.seed;
   return recipe;
@@ -299,6 +306,35 @@ function applyStyle(styleId) {
   syncAssetSelection();
   schedulePreview();
   toast(`已切换到「${style.label?.zh || styleId}」`);
+}
+
+function buildBackgrounds() {
+  const box = elements.backgrounds;
+  if (!box || !state.manifest?.backgrounds) return;
+  const current = state.recipe?.background || null;
+  const chips = [
+    makeBackgroundChip("none", "无", current === null),
+    ...state.manifest.backgrounds.map((item) =>
+      makeBackgroundChip(item.id, item.label?.zh || item.id, current === item.id)
+    ),
+  ];
+  box.replaceChildren(...chips);
+}
+
+function makeBackgroundChip(id, label, selected) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "bg-chip";
+  button.dataset.background = id === "none" ? "" : id;
+  button.textContent = label;
+  button.setAttribute("aria-pressed", String(selected));
+  button.addEventListener("click", () => {
+    state.recipe.background = id === "none" ? null : id;
+    saveRecipe();
+    buildBackgrounds();
+    schedulePreview();
+  });
+  return button;
 }
 
 function renderCategories() {
@@ -1137,11 +1173,13 @@ async function boot() {
 
     state.style = currentStyle();
     buildStyleTabs();
+    buildBackgrounds();
 
     const initial = loadInitialRecipe(state.manifest);
     state.recipe = initial.recipe;
     state.style = currentStyle();
     buildStyleTabs();
+    buildBackgrounds();
     state.slotId = pickInitialSlot();
     if (!state.slotId) throw new Error("没有可用槽位");
 

@@ -87,6 +87,7 @@ class AvatarRecipe(BaseModel):
 
     version: int = 1
     slots: dict[SlotId, str | None] = Field(default_factory=dict)
+    background: str | None = None
     colors: dict[SlotId, str] = Field(default_factory=dict)
     seed: int | None = None
 
@@ -98,6 +99,17 @@ class AvatarRecipe(BaseModel):
         for slot_id, color in value.items():
             if not _HEX_COLOR.fullmatch(color):
                 raise ValueError(f"{slot_id} 的颜色必须是 #RRGGBB，收到 {color!r}")
+        return value
+
+    @field_validator("background")
+    @classmethod
+    def check_background(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        from .backdrop import PRESETS
+
+        if value not in PRESETS:
+            raise ValueError(f"未知背景：{value!r}")
         return value
 
     @field_validator("slots")

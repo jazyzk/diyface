@@ -17,6 +17,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from .backdrop import manifest as backdrop_manifest
 from .models import PALETTES, SLOTS, Slot, SlotId
 
 CANVAS = 1024
@@ -138,4 +139,4 @@ def manifest(catalog: dict[SlotId, list[Asset]]) -> dict:
                 ],
             }
         )
-    return {"schema": 1, "slots": slots, "styles": styles(catalog)}
+    return {"schema": 1, "slots": slots, "styles": styles(catalog), "backgrounds": backdrop_manifest()}

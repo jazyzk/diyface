@@ -11,6 +11,7 @@ from functools import lru_cache
 
 from PIL import Image
 
+from .backdrop import render as render_backdrop
 from .catalog import Asset, is_sprite
 from .models import AvatarRecipe, SLOTS_BY_Z, SlotId
 from .palettes import tint
@@ -29,6 +30,10 @@ def load_layer(path: str) -> Image.Image:
 def compose(recipe: AvatarRecipe, catalog: dict[SlotId, dict[str, Asset]]) -> Image.Image:
     """把配方涉及的所有图层按 z 序叠成一张 1024 的图。"""
     canvas = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
+    if recipe.background:
+        backdrop = render_backdrop(recipe.background)
+        if backdrop is not None:
+            canvas = backdrop
 
     for slot in SLOTS_BY_Z:
         asset_id = recipe.slots.get(slot.id)

@@ -369,6 +369,28 @@ a {
   margin-top: 2px;
 }
 
+.bg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bg-chip {
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.bg-chip[aria-pressed="true"] {
+  background: #e8efff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
 .preview-card {
   position: relative;
   display: grid;
@@ -801,6 +823,28 @@ kbd {
   display: flex;
   gap: 6px;
   margin-top: 2px;
+}
+
+.bg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bg-chip {
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.bg-chip[aria-pressed="true"] {
+  background: #e8efff;
+  border-color: var(--accent);
+  font-weight: 600;
 }
 
 .preview-card {
