@@ -139,7 +139,7 @@ def test_manifest_lists_two_styles() -> None:
 
     styles = data["styles"]
     assert [style["id"] for style in styles][0] == "adventurer"
-    assert {style["id"] for style in styles} == {"adventurer", "lorelei"}
+    assert {style["id"] for style in styles} == {"adventurer", "lorelei", "pixel"}
     for style in styles:
         assert style["label"]["zh"]
         assert style["defaults"], "每种风格至少要有默认素材"

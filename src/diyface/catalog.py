@@ -65,11 +65,13 @@ def scan(root: Path) -> dict[SlotId, list[Asset]]:
 
 STYLE_PREFIXES: dict[str, str] = {
     "lorelei_": "lorelei",
+    "pixel_": "pixel",
 }
 
 STYLE_LABELS: dict[str, dict[str, str]] = {
     "adventurer": {"zh": "美式卡通", "en": "Adventurer"},
     "lorelei": {"zh": "手绘线稿", "en": "Lorelei"},
+    "pixel": {"zh": "像素方块", "en": "Pixel"},
 }
 
 

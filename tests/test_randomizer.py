@@ -19,14 +19,14 @@ REQUIRED = [slot for slot in ACTIVE if slot.id not in OPTIONAL]
 def build_catalog(workdir: Path) -> dict:
     """每类造 2 张素材，确保随机有得选。"""
     layout = {
-        "01_skin": ["skin_base", "skin_slim", "lorelei_skin_01", "lorelei_skin_02"],
+        "01_skin": ["skin_base", "skin_slim", "lorelei_skin_01", "lorelei_skin_02", "pixel_skin_01", "pixel_skin_02"],
         "02_clothes": ["clothes_crew_01", "clothes_shirt_01"],
         "03_hair_back": ["hair_back_long_01", "hair_back_short_01"],
-        "04_hair": ["hair_straight_01", "hair_wavy_01", "lorelei_hair_01"],
-        "05_eyes": ["eyes_round_01", "eyes_star_01", "lorelei_eyes_01", "lorelei_eyes_02"],
-        "06_brows": ["brows_soft_01", "brows_sharp_01"],
-        "07_mouth": ["mouth_smile_01", "mouth_laugh_01"],
-        "08_glasses": ["glasses_round_01", "glasses_sun_01"],
+        "04_hair": ["hair_straight_01", "hair_wavy_01", "lorelei_hair_01", "pixel_hair_01"],
+        "05_eyes": ["eyes_round_01", "eyes_star_01", "lorelei_eyes_01", "lorelei_eyes_02", "pixel_eyes_01", "pixel_eyes_02"],
+        "06_brows": ["brows_soft_01", "brows_sharp_01", "pixel_brows_01"],
+        "07_mouth": ["mouth_smile_01", "mouth_laugh_01", "pixel_mouth_01"],
+        "08_glasses": ["glasses_round_01", "glasses_sun_01", "pixel_glasses_01"],
         "09_hat": ["hat_beret_01", "hat_cap_01"],
         "10_extra": ["extra_earring_01", "extra_star_01"],
         "11_clothes": ["clothes_crew_01", "clothes_hoodie_01"],
@@ -100,11 +100,12 @@ def test_random_never_mixes_styles(workdir: Path) -> None:
     from diyface.catalog import style_of
 
     catalog = build_catalog(workdir)
-    for seed in range(30):
-        recipe = random_recipe(catalog, random.Random(seed), style="lorelei")
-        used = [asset_id for asset_id in recipe.slots.values() if asset_id]
-        assert used, "至少要有素材"
-        assert {style_of(asset_id) for asset_id in used} == {"lorelei"}
+    for style in ("lorelei", "pixel"):
+        for seed in range(15):
+            recipe = random_recipe(catalog, random.Random(seed), style=style)
+            used = [asset_id for asset_id in recipe.slots.values() if asset_id]
+            assert used, "至少要有素材"
+            assert {style_of(asset_id) for asset_id in used} == {style}
 
 
 def test_random_without_style_keeps_old_behaviour(workdir: Path) -> None:
