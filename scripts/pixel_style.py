@@ -206,6 +206,256 @@ def glasses(kind: str) -> CELLMAP:
     return cells
 
 
+
+# ---------------------------------------------------------------- 像素小装饰
+
+#: ASCII 画稿：. 空，o 描边，其余字母见 DECOR_COLORS
+DECOR_COLORS = {
+    "o": OUTLINE,
+    "b": "#A97142",
+    "w": "#FFFFFF",
+    "r": "#D50000",
+    "y": "#F1C40F",
+    "g": "#27AE60",
+    "p": "#E84393",
+    "k": "#1F2430",
+}
+
+CAT = """
+.o....o.
+.ob..bo.
+obbbbbbo
+obwbbwbo
+obbbbbbo
+obbbbbbo
+.obbbbo.
+..oooo..
+"""
+
+DOG = """
+.oo..oo.
+.obbbbo.
+obbbbbbo
+obwbbwbo
+obbbbbbo
+.obbbbo.
+..oooo..
+........
+"""
+
+BEAR = """
+.oo..oo.
+obbbbbbo
+obwbbwbo
+obbbbbbo
+obbbbbbo
+.obbbbo.
+..oooo..
+........
+"""
+
+BUNNY = """
+.o..o...
+.o..o...
+.obbo...
+obbbbbbo
+obwbbwbo
+.obbbbo.
+..oooo..
+........
+"""
+
+APPLE = """
+...og...
+..orro..
+.orrrro.
+orrrrrro
+orrrrrro
+.orrrro.
+..orro..
+...oo...
+"""
+
+CHERRY = """
+....og..
+...og...
+..og....
+.orro...
+orrrro..
+.orrrro.
+..orro..
+........
+"""
+
+MELON = """
+........
+.oooooo.
+orrrrrro
+orwwrwro
+.orroo..
+..oo....
+........
+........
+"""
+
+SUNFLOWER = """
+.y..y...
+..yy....
+.yyyy...
+yykyyy..
+.yyyy...
+..yy....
+.y..y...
+........
+"""
+
+TULIP = """
+.o..o...
+.orro...
+orrrro..
+.orro...
+..og....
+..og....
+..og....
+........
+"""
+
+ROSE = """
+..oo....
+.orro...
+orrrro..
+.orrrro.
+..orro..
+...oo...
+........
+........
+"""
+
+STAR = """
+...y....
+...y....
+.yyy.y..
+..yyy...
+..yyy...
+.yy.yy..
+........
+........
+"""
+
+HEART = """
+........
+.orrro..
+orrrrro.
+orrrrro.
+.orrrro.
+..orro..
+...oo...
+........
+"""
+
+
+BUTTERFLY = """
+.o...o..
+oro.oro.
+orrrrro.
+.orrrro.
+orrrrro.
+oro.oro.
+.o...o..
+........
+"""
+
+MUSHROOM = """
+..oooo..
+.orrrro.
+orrrrrro
+.owwwwo.
+..owwo..
+..owwo..
+..oooo..
+........
+"""
+
+LEAF = """
+....og..
+...ogg..
+..oggo..
+.oggo...
+.oggo...
+..oggo..
+...ogg..
+....og..
+"""
+
+ICECREAM = """
+..oooo..
+..oyyo..
+..oyyo..
+..owwo..
+.owwwwo.
+..owwo..
+...oo...
+........
+"""
+
+RAINBOW = """
+.oooooo.
+orrrrrro
+oyyyyyyo
+oggggggo
+........
+........
+........
+........
+"""
+
+CLOUD = """
+..oo....
+.oowo...
+oowwwoo.
+owwwwwwo
+.oooooo.
+........
+........
+........
+"""
+
+#: (名字, 画稿, 左上角锚点)
+DECORS = [
+    ("cat", CAT, (23, 20)),
+    ("dog", DOG, (23, 20)),
+    ("bear", BEAR, (23, 20)),
+    ("bunny", BUNNY, (23, 20)),
+    ("apple", APPLE, (23, 20)),
+    ("cherry", CHERRY, (23, 20)),
+    ("melon", MELON, (23, 20)),
+    ("sunflower", SUNFLOWER, (23, 3)),
+    ("tulip", TULIP, (23, 3)),
+    ("rose", ROSE, (23, 3)),
+    ("star", STAR, (3, 4)),
+    ("heart", HEART, (3, 20)),
+    ("butterfly", BUTTERFLY, (23, 6)),
+    ("mushroom", MUSHROOM, (23, 21)),
+    ("leaf", LEAF, (2, 6)),
+    ("icecream", ICECREAM, (23, 21)),
+    ("rainbow", RAINBOW, (20, 2)),
+    ("cloud", CLOUD, (23, 3)),
+]
+
+
+def parse_art(art: str, anchor: tuple[int, int]) -> CELLMAP:
+    cells: CELLMAP = {}
+    ax, ay = anchor
+    for row, line in enumerate(art.strip("\n").splitlines()):
+        for col, mark in enumerate(line):
+            if mark == "." or mark not in DECOR_COLORS:
+                continue
+            x, y = ax + col, ay + row
+            if 0 <= x < GRID and 0 <= y < GRID:
+                cells[(x, y)] = DECOR_COLORS[mark]
+    return cells
+
+
 # ---------------------------------------------------------------- 输出
 
 
@@ -227,6 +477,7 @@ JOBS: list[tuple[str, str, bool, list[tuple[str, CELLMAP]]]] = [
     ("06_brows", "brows", True, [(kind, brows(kind)) for kind in BROW_SHAPES]),
     ("07_mouth", "mouth", False, [(kind, mouth(kind, "#C0504D")) for kind in MOUTH_SHAPES]),
     ("08_glasses", "glasses", False, [(kind, glasses(kind)) for kind in GLASSES_SHAPES]),
+    ("10_extra", "extra", False, [(name, parse_art(art, anchor)) for name, art, anchor in DECORS]),
 ]
 
 

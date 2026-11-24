@@ -266,7 +266,8 @@ function applyStyle(styleId) {
 }
 
 function renderCategories() {
-  const buttons = state.manifest.slots.map((slot) => {
+  const visible = state.manifest.slots.filter((slot) => assetList(slot).length > 0);
+  const buttons = visible.map((slot) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "category";

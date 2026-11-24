@@ -82,12 +82,13 @@ def test_budget_matches_plan() -> None:
         SlotId.BROWS: 11,
         SlotId.MOUTH: 29,
         SlotId.GLASSES: 12,
+        SlotId.EXTRA: 18,
     }
     catalog = scan(ASSETS)
 
     for slot_id, expected in budget.items():
         assert len(catalog[slot_id]) == expected, f"{slot_id} 应有 {expected} 张，实际 {len(catalog[slot_id])} 张"
-    assert sum(len(assets) for assets in catalog.values()) == 123
+    assert sum(len(assets) for assets in catalog.values()) == 141
 
 
 def test_hair_does_not_cover_eyes() -> None:
