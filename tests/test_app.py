@@ -40,15 +40,15 @@ def test_manifest_carries_default_recipe(client) -> None:
     recipe = client.get("/api/manifest").get_json()["default_recipe"]
 
     assert len(recipe["slots"]) == len(SLOTS) == 10
-    assert recipe["slots"]["skin"] == "skin_base"
+    assert recipe["slots"]["skin"] == "pixel_skin_01"
     assert recipe["colors"]["hair"] == "#2B1B12"
 
 
 def test_default_recipe_endpoint_picks_first_asset(client) -> None:
     data = client.get("/api/recipe/default").get_json()
 
-    assert data["slots"]["skin"] == "skin_base"
-    assert data["slots"]["hair"] == "hair_straight_01"
+    assert data["slots"]["skin"] == "pixel_skin_01"
+    assert data["slots"]["hair"] == "pixel_hair_01"
     assert data["slots"]["hat"] is None, "本期不做帽子"
     assert data["slots"]["glasses"] is None, "眼镜是配饰，默认不戴"
 

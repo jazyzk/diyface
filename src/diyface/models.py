@@ -47,14 +47,14 @@ class Slot:
 
 
 SLOTS: tuple[Slot, ...] = (
-    Slot(SlotId.SKIN, 10, True, "#E8B98A", "skin", "01_skin", "脸型", "Skin", "skin_base"),
+    Slot(SlotId.SKIN, 10, True, "#E8B98A", "skin", "01_skin", "脸型", "Skin", "pixel_skin_01"),
     Slot(SlotId.CLOTHES, 20, True, "#3A6EA5", "clothes", "02_clothes", "服装", "Clothes", "clothes_crew_01"),
     Slot(SlotId.HAIR_BACK, 25, True, "#2B1B12", "hair_back", "03_hair_back", "后发", "Back hair", "hair_back_long_straight_01"),
-    Slot(SlotId.HAIR, 30, True, "#2B1B12", "hair", "04_hair", "前发", "Hair", "hair_straight_01"),
-    Slot(SlotId.EYES, 40, False, "#2B2B2B", "eyes", "05_eyes", "眼睛", "Eyes", "eyes_round_01"),
-    Slot(SlotId.BROWS, 45, True, "#2B1B12", "brows", "06_brows", "眉毛", "Brows", "brows_soft_01"),
-    Slot(SlotId.MOUTH, 50, False, "#C0504D", "mouth", "07_mouth", "嘴", "Mouth", "mouth_smile_01"),
-    Slot(SlotId.GLASSES, 60, False, "#2B2B2B", "glasses", "08_glasses", "眼镜", "Glasses", "glasses_round_01"),
+    Slot(SlotId.HAIR, 30, True, "#2B1B12", "hair", "04_hair", "前发", "Hair", "pixel_hair_01"),
+    Slot(SlotId.EYES, 40, False, "#2B2B2B", "eyes", "05_eyes", "眼睛", "Eyes", "pixel_eyes_01"),
+    Slot(SlotId.BROWS, 45, True, "#2B1B12", "brows", "06_brows", "眉毛", "Brows", "pixel_brows_01"),
+    Slot(SlotId.MOUTH, 50, False, "#C0504D", "mouth", "07_mouth", "嘴", "Mouth", "pixel_mouth_01"),
+    Slot(SlotId.GLASSES, 60, False, "#2B2B2B", "glasses", "08_glasses", "眼镜", "Glasses", "pixel_glasses_01"),
     Slot(SlotId.HAT, 70, True, "#8E5A4A", "hat", "09_hat", "帽子", "Hats", "hat_beret_01"),
     Slot(SlotId.EXTRA, 80, False, "#D4A017", "extra", "10_extra", "配饰", "Extras", "pixel_extra_01"),
 )

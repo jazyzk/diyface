@@ -40,7 +40,7 @@ def test_manifest_over_http() -> None:
     assert response.status == 200
     assert response.headers["content-type"].startswith("application/json")
     assert response.json["schema"] == 1
-    assert response.json["default_recipe"]["slots"]["skin"] == "skin_base"
+    assert response.json["default_recipe"]["slots"]["skin"] == "pixel_skin_01"
 
 
 def test_render_returns_png_with_etag() -> None:

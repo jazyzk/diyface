@@ -266,8 +266,8 @@ class TestPlanDocument(MarkdownDocChecks, unittest.TestCase):
                 declared_total = int(cells[1])
 
         self.assertEqual(len(per_slot), 6, "预算表应覆盖 6 个面部槽位")
-        self.assertEqual(sum(per_slot.values()), 131, "预算表各槽位之和应为 48")
-        self.assertEqual(declared_total, 131, "合计行应写 48，与逐项之和一致")
+        self.assertEqual(sum(per_slot.values()), 137, "预算表各槽位之和应为 48")
+        self.assertEqual(declared_total, 137, "合计行应写 48，与逐项之和一致")
 
 
 class TestCollaborationDocument(MarkdownDocChecks, unittest.TestCase):

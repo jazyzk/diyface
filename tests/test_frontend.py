@@ -57,7 +57,7 @@ def test_index_inlines_manifest_that_matches_api() -> None:
     ids = [slot["id"] for slot in inline["slots"]]
     assert {"skin", "hair", "eyes"} <= set(ids)
     assert [slot["z"] for slot in inline["slots"]] == sorted(slot["z"] for slot in inline["slots"])
-    assert inline["default_recipe"]["slots"]["skin"] == "skin_base"
+    assert inline["default_recipe"]["slots"]["skin"] == "pixel_skin_01"
 
 
 def test_index_manifest_does_not_break_out_of_script_tag() -> None:

@@ -100,7 +100,7 @@ def styles(catalog: dict[SlotId, list[Asset]]) -> list[dict]:
         for asset in catalog.get(slot.id, []):
             style = style_of(asset.id)
             defaults.setdefault(style, {}).setdefault(slot.id.value, asset.id)
-    ordered = sorted(defaults.items(), key=lambda item: (item[0] != "adventurer", item[0]))
+    ordered = sorted(defaults.items(), key=lambda item: (item[0] != "pixel", item[0]))
     return [
         {"id": style, "label": STYLE_LABELS.get(style, {"zh": style, "en": style}), "defaults": slots}
         for style, slots in ordered

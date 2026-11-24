@@ -138,7 +138,7 @@ def test_manifest_lists_two_styles() -> None:
     data = manifest(scan(ASSETS))
 
     styles = data["styles"]
-    assert [style["id"] for style in styles][0] == "adventurer"
+    assert [style["id"] for style in styles][0] == "pixel"
     assert {style["id"] for style in styles} == {"adventurer", "lorelei", "pixel"}
     for style in styles:
         assert style["label"]["zh"]
