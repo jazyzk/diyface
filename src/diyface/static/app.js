@@ -227,21 +227,56 @@ function assetList(slot) {
   return (slot.assets || []).filter((asset) => (asset.style || STYLE_FALLBACK) === style);
 }
 
+function makeStyleTab(style, current) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "style-tab";
+  button.dataset.styleId = style.id;
+  button.textContent = style.label?.zh || style.id;
+  button.setAttribute("role", "tab");
+  button.setAttribute("aria-selected", String(style.id === current));
+  button.addEventListener("click", () => applyStyle(style.id));
+  return button;
+}
+
 function buildStyleTabs() {
   const box = elements.styleTabs;
-  if (!box || !state.manifest?.styles) return;
-  const tabs = state.manifest.styles.map((style) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "style-tab";
-    button.dataset.styleId = style.id;
-    button.textContent = style.label?.zh || style.id;
-    button.setAttribute("role", "tab");
-    button.setAttribute("aria-selected", String(style.id === (state.style || STYLE_FALLBACK)));
-    button.addEventListener("click", () => applyStyle(style.id));
-    return button;
-  });
-  box.replaceChildren(...tabs);
+  const styles = state.manifest?.styles || [];
+  if (!box || !styles.length) return;
+
+  const primary = styles[0];
+  const current = state.style || primary.id;
+  const extras = styles.slice(1);
+  const open = box.classList.contains("is-open");
+
+  const nodes = [makeStyleTab(primary, current)];
+
+  const activeExtra = extras.find((style) => style.id === current);
+  if (activeExtra) nodes.push(makeStyleTab(activeExtra, current));
+
+  if (extras.length) {
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "style-more";
+    more.textContent = open ? "收起" : "更多风格";
+    more.setAttribute("aria-expanded", String(open));
+    more.addEventListener("click", () => {
+      box.classList.toggle("is-open");
+      buildStyleTabs();
+    });
+    nodes.push(more);
+  }
+
+  if (open && extras.length) {
+    const row = document.createElement("div");
+    row.className = "style-extra-row";
+    row.append(
+      ...extras.filter((style) => style.id !== current).map((style) => makeStyleTab(style, current))
+    );
+    nodes.push(row);
+  }
+
+  box.replaceChildren(...nodes);
 }
 
 function applyStyle(styleId) {
