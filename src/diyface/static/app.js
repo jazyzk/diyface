@@ -39,6 +39,7 @@ const elements = {
 };
 
 const STYLE_FALLBACK = "adventurer";
+const SPRITE_PREFIX = "pixel_subject";
 
 const STICKER_KEY = "diyface.stickers.v2";
 const LEGACY_STICKER_KEY = "diyface.sticker.v1";
@@ -355,10 +356,41 @@ function renderAssets(slot) {
   elements.assetsCount.textContent = `${assets.length} 张`;
 }
 
+function isSpriteId(assetId) {
+  return typeof assetId === "string" && assetId.startsWith(SPRITE_PREFIX);
+}
+
+function applyStyleDefaults(styleId) {
+  const style = (state.manifest.styles || []).find((item) => item.id === styleId);
+  if (!style) return;
+  for (const slot of state.manifest.slots) {
+    state.recipe.slots[slot.id] = style.defaults?.[slot.id] ?? null;
+  }
+}
+
 function applyAsset(assetId) {
   if (!state.slotId) return;
+  const previousSkin = state.recipe.slots.skin;
+  if (isSpriteId(previousSkin) && state.slotId !== "skin") {
+    applyStyleDefaults(state.style || STYLE_FALLBACK);
+  }
   state.recipe.slots[state.slotId] = assetId;
+
+  // 整身像素形象（猫、苹果……）：选中后清掉其他图层；换回人脸时恢复默认面部
+  if (state.slotId === "skin") {
+    if (isSpriteId(assetId)) {
+      for (const slot of state.manifest.slots) {
+        if (slot.id !== "skin") state.recipe.slots[slot.id] = null;
+      }
+    } else if (!assetId || isSpriteId(previousSkin)) {
+      applyStyleDefaults(state.style || STYLE_FALLBACK);
+    }
+  }
+
   saveRecipe();
+  renderCategories();
+  const slot = findSlot(state.slotId);
+  if (slot) renderAssets(slot);
   syncAssetSelection();
   schedulePreview();
 }
@@ -405,10 +437,13 @@ function syncColorControls(slot) {
   const current = state.recipe.colors[slot.id] || slot.default_color || "#000000";
   elements.color.value = (HEX_COLOR.test(current) ? current : "#000000").toLowerCase();
   elements.colorValue.textContent = current.toUpperCase();
-  elements.color.disabled = !slot.tintable;
-  elements.colorHint.textContent = slot.tintable
-    ? `正在调整「${displayLabel(slot)}」的颜色`
-    : `「${displayLabel(slot)}」是固定素材，不支持换色`;
+  const spriteSelected = slot.id === "skin" && isSpriteId(current);
+  elements.color.disabled = !slot.tintable || spriteSelected;
+  elements.colorHint.textContent = spriteSelected
+    ? "整身形象是成品图，不支持换色"
+    : slot.tintable
+      ? `正在调整「${displayLabel(slot)}」的颜色`
+      : `「${displayLabel(slot)}」是固定素材，不支持换色`;
 
   buildSwatches(slot);
 

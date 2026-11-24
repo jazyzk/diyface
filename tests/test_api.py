@@ -234,3 +234,13 @@ def test_render_rejects_mixed_styles() -> None:
 
     assert response.status == 422
     assert response.json["error"]["code"] == "MIXED_STYLE"
+
+
+def test_render_subject_only() -> None:
+    """整身形象可以单独成头像，不需要脸。"""
+    body = {"recipe": {"slots": {"skin": "pixel_subject_01"}}, "size": 256}
+
+    response = http_client.call(app, "POST", "/api/render", json_body=body)
+
+    assert response.status == 200
+    assert response.body.startswith(b"\x89PNG")

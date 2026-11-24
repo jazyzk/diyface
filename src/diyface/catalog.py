@@ -75,6 +75,14 @@ STYLE_LABELS: dict[str, dict[str, str]] = {
 }
 
 
+#: 整身像素形象的 id 前缀（放在 skin 槽位，但不参与相乘上色）
+SPRITE_PREFIXES: tuple[str, ...] = ("pixel_subject",)
+
+
+def is_sprite(asset_id: str) -> bool:
+    return any(asset_id.startswith(prefix) for prefix in SPRITE_PREFIXES)
+
+
 def style_of(asset_id: str) -> str:
     """从素材 id 判断属于哪套风格；没有前缀的归入默认风格。"""
     for prefix, style in STYLE_PREFIXES.items():

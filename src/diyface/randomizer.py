@@ -16,6 +16,12 @@ OPTIONAL = frozenset({SlotId.GLASSES, SlotId.HAT, SlotId.CLOTHES, SlotId.EXTRA})
 #: 可选槽位留空的概率。
 EMPTY_CHANCE = 0.35
 
+#: 随机出「整身形象」的概率（猫、苹果、蘑菇……）
+SUBJECT_CHANCE = 0.2
+
+#: 整身像素形象的 id 前缀（放在 skin 槽位）
+SPRITE_PREFIX = "pixel_subject"
+
 #: 保证「同一 seed 出同一张脸」的种子上限。
 SEED_LIMIT = 1_000_000
 
@@ -41,11 +47,24 @@ def random_recipe(
         ]
         style = rng.choice(complete or available) if available else None
 
+    sprite_options = [
+        asset_id
+        for asset_id in sorted(catalog.get(SlotId.SKIN, {}))
+        if asset_id.startswith(SPRITE_PREFIX) and (not style or style_of(asset_id) == style)
+    ]
+    if sprite_options and rng.random() < SUBJECT_CHANCE:
+        slots = {slot.id: None for slot in SLOTS}
+        slots[SlotId.SKIN] = rng.choice(sprite_options)
+        colors = {slot.id: slot.default_color for slot in SLOTS}
+        return AvatarRecipe(slots=slots, colors=colors, seed=rng.randrange(SEED_LIMIT))
+
     slots: dict[SlotId, str | None] = {}
     colors: dict[SlotId, str] = {}
 
     for slot in SLOTS:
-        options = sorted(catalog.get(slot.id, {}))
+        options = [
+            asset_id for asset_id in sorted(catalog.get(slot.id, {})) if not asset_id.startswith(SPRITE_PREFIX)
+        ] if slot.id is SlotId.SKIN else sorted(catalog.get(slot.id, {}))
         if style:
             options = [asset_id for asset_id in options if style_of(asset_id) == style]
         if slot.id in RESERVED or not options:

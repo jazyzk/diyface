@@ -19,7 +19,7 @@ REQUIRED = [slot for slot in ACTIVE if slot.id not in OPTIONAL]
 def build_catalog(workdir: Path) -> dict:
     """每类造 2 张素材，确保随机有得选。"""
     layout = {
-        "01_skin": ["skin_base", "skin_slim", "lorelei_skin_01", "lorelei_skin_02", "pixel_skin_01", "pixel_skin_02"],
+        "01_skin": ["skin_base", "skin_slim", "lorelei_skin_01", "lorelei_skin_02", "pixel_skin_01", "pixel_skin_02", "pixel_subject_01"],
         "02_clothes": ["clothes_crew_01", "clothes_shirt_01"],
         "03_hair_back": ["hair_back_long_01", "hair_back_short_01"],
         "04_hair": ["hair_straight_01", "hair_wavy_01", "lorelei_hair_01", "pixel_hair_01"],
@@ -31,6 +31,7 @@ def build_catalog(workdir: Path) -> dict:
         "10_extra": ["extra_earring_01", "extra_star_01"],
         "11_clothes": ["clothes_crew_01", "clothes_hoodie_01"],
         "12_extra": ["extra_earring_01", "extra_star_01"],
+
     }
     for folder, names in layout.items():
         for name in names:
@@ -123,3 +124,20 @@ def test_random_without_style_picks_one_style(workdir: Path) -> None:
         recipe = random_recipe(catalog, random.Random(seed))
         used = {style_of(asset_id) for asset_id in recipe.slots.values() if asset_id}
         assert len(used) == 1, f"混了风格：{used}"
+
+
+def test_random_can_produce_subject_only(workdir: Path) -> None:
+    """像素风格下，随机有机会只出一张整身形象。"""
+    from diyface.catalog import style_of
+
+    catalog = build_catalog(workdir)
+    subjects = [
+        recipe
+        for recipe in (random_recipe(catalog, random.Random(seed), style="pixel") for seed in range(40))
+        if (recipe.slots.get("skin") or "").startswith("pixel_subject")
+    ]
+    assert subjects, "40 次里应该至少出一次整身形象"
+    for recipe in subjects:
+        used = {style_of(asset_id) for asset_id in recipe.slots.values() if asset_id}
+        assert used == {"pixel"}
+        assert len([v for v in recipe.slots.values() if v]) == 1, "整身形象应当独占"

@@ -11,6 +11,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from .catalog import is_sprite
+
 CANVAS = 1024
 MAX_BYTES = 80 * 1024
 TINT_SUFFIX = "_tint.png"
@@ -61,7 +63,7 @@ def validate_asset(path: Path, *, tintable: bool = True) -> list[str]:
     except OSError as exc:
         problems.append(f"打不开图片：{exc}")
 
-    if tintable and not tint_mask_path(path).is_file():
+    if tintable and not is_sprite(path.stem) and not tint_mask_path(path).is_file():
         problems.append(f"可着色素材缺少蒙版 {tint_mask_path(path).name}")
 
     return problems

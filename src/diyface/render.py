@@ -11,7 +11,7 @@ from functools import lru_cache
 
 from PIL import Image
 
-from .catalog import Asset
+from .catalog import Asset, is_sprite
 from .models import AvatarRecipe, SLOTS_BY_Z, SlotId
 from .palettes import tint
 from .sticker import place as place_sticker
@@ -41,7 +41,7 @@ def compose(recipe: AvatarRecipe, catalog: dict[SlotId, dict[str, Asset]]) -> Im
             raise KeyError(f"{slot.id.value} 没有素材 {asset_id!r}") from exc
 
         layer = load_layer(str(asset.path))
-        if slot.tintable:
+        if slot.tintable and not is_sprite(asset_id):
             layer = tint(layer, recipe.colors.get(slot.id, slot.default_color))
         canvas = Image.alpha_composite(canvas, layer)
 
