@@ -32,20 +32,24 @@ def test_read_code_without_engine_returns_none(monkeypatch) -> None:
 
 def test_read_code_uses_engine_output(monkeypatch) -> None:
     monkeypatch.setattr(ocr, "available", lambda: True)
-    monkeypatch.setattr(ocr, "_run_tesseract", lambda cell: "H2\n")
+    monkeypatch.setattr(ocr, "_run_tesseract", lambda cell, variant=None: "H2\n")
 
     assert ocr.read_code(Image.new("L", (10, 10), "white")) == "H2"
 
 
 def test_vote_codes_picks_majority(monkeypatch) -> None:
-    calls = iter(["H2", None, "H2", "H7"])
-    monkeypatch.setattr(ocr, "read_code", lambda cell: next(calls))
+    monkeypatch.setattr(ocr, "available", lambda: True)
+    monkeypatch.setattr(ocr, "VARIANTS", ((10, 190, 10),))
+    results = iter(["H2", None, "H2", "H7"])
+    monkeypatch.setattr(ocr, "_run_tesseract", lambda cell, variant=None: next(results))
 
     assert ocr.vote_codes([Image.new("L", (8, 8))] * 4) == "H2"
 
 
 def test_vote_codes_returns_none_when_nothing_recognised(monkeypatch) -> None:
-    monkeypatch.setattr(ocr, "read_code", lambda cell: None)
+    monkeypatch.setattr(ocr, "available", lambda: True)
+    monkeypatch.setattr(ocr, "VARIANTS", ((10, 190, 10),))
+    monkeypatch.setattr(ocr, "_run_tesseract", lambda cell, variant=None: "")
 
     assert ocr.vote_codes([Image.new("L", (8, 8))] * 3) is None
 

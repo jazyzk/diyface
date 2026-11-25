@@ -53,3 +53,10 @@ tesseract.exe
 tessdata/
 doc/
 *.1.html
+# 根目录下的 Tesseract 便携版运行库（不入库）
+/*.exe
+/*.dll
+/*.html
+/*.jar
+/doc/
+/tessdata/

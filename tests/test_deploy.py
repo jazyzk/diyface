@@ -44,3 +44,22 @@ def test_deploy_doc_covers_three_routes() -> None:
 
     for token in ("Render", "cloudflared", "waitress", "healthz"):
         assert token in text, f"部署文档缺少：{token}"
+
+
+def test_procfile_and_runtime() -> None:
+    """免费平台（Railway / Heroku 系）读 Procfile，Python 版本读 runtime.txt。"""
+    procfile = (ROOT / "Procfile").read_text(encoding="utf-8").strip()
+    runtime = (ROOT / "runtime.txt").read_text(encoding="utf-8").strip()
+
+    assert procfile.startswith("web:")
+    assert "waitress-serve" in procfile
+    assert "$PORT" in procfile
+    assert "diyface.app:app" in procfile
+    assert runtime.startswith("python-3.12")
+
+
+def test_free_deploy_doc_covers_platforms() -> None:
+    text = (ROOT / "docs" / "DEPLOY-FREE.md").read_text(encoding="utf-8")
+
+    for token in ("Render", "Railway", "Zeabur", "Procfile", "healthz"):
+        assert token in text, f"部署文档缺少：{token}"

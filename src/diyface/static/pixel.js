@@ -450,8 +450,18 @@ document.getElementById("chart-file").addEventListener("change", async (event) =
     chartState = data;
     renderChartClusters(data);
     document.getElementById("chart-box").hidden = false;
+    const biggest = Math.max(...data.clusters.map((cluster) => cluster.count));
+    const pending = data.clusters.filter(
+      (cluster) => !cluster.suggestion && cluster.count !== biggest
+    );
     const hint = data.ocr ? "（已用 OCR 预填色号，请核对）" : "（未安装 OCR，请手动指定色号）";
     say(`识别到 ${data.rows}×${data.cols} 网格，${data.clusters.length} 种图案 ${hint}`);
+
+    // 所有非空图案都识别出来了，直接生成，省一次点击
+    if (data.ocr && pending.length === 0) {
+      say("OCR 全部识别成功，正在自动生成…");
+      setTimeout(() => document.getElementById("chart-apply").click(), 200);
+    }
   } catch (error) {
     say(error.message);
   } finally {

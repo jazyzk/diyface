@@ -85,14 +85,25 @@ def available() -> bool:
     return _tesseract_path() is not None and _tessdata() is not None
 
 
-def _prepare(cell: Image.Image) -> Image.Image:
-    """放大 + 灰度 + 二值化：小字号识别率更高。"""
+#: 多组预处理参数：小字号的 1/5/8 容易混淆，换几组放大比例能互相纠错
+VARIANTS = (
+    (10, 190, 10),
+    (12, 190, 14),
+    (8, 210, 12),
+)
+
+
+def _prepare(cell: Image.Image, scale: int = 10, threshold: int = 190, pad: int = 10) -> Image.Image:
+    """放大 + 二值化 + 加白边。"""
+    from PIL import ImageOps
+
     image = cell.convert("L")
-    image = image.resize((image.width * 6, image.height * 6), Image.LANCZOS)
-    return image.point(lambda value: 0 if value < 170 else 255)
+    image = image.resize((image.width * scale, image.height * scale), Image.LANCZOS)
+    image = image.point(lambda value: 0 if value < threshold else 255)
+    return ImageOps.expand(image, border=pad, fill=255)
 
 
-def _run_tesseract(image: Image.Image) -> str | None:
+def _run_tesseract(image: Image.Image, variant: tuple[int, int, int] = VARIANTS[0]) -> str | None:
     binary = _tesseract_path()
     data = _tessdata()
     if binary is None or data is None:
@@ -101,7 +112,7 @@ def _run_tesseract(image: Image.Image) -> str | None:
     workdir = _cache_root() / "tmp"
     workdir.mkdir(parents=True, exist_ok=True)
     path = workdir / "cell.png"
-    _prepare(image).save(path)
+    _prepare(image, *variant).save(path)
 
     env = dict(os.environ)
     env["TESSDATA_PREFIX"] = data
@@ -146,21 +157,28 @@ def normalise(text: str) -> str | None:
 
 
 def read_code(cell: Image.Image) -> str | None:
-    """识别一个格子里的色号；失败返回 None。"""
+    """识别一个格子里的色号；多个预处理变体里取第一个合法结果。"""
     if not available():
         return None
-    return normalise(_run_tesseract(cell) or "")
+    for variant in VARIANTS:
+        code = normalise(_run_tesseract(cell, variant) or "")
+        if code:
+            return code
+    return None
 
 
 def vote_codes(cells: list[Image.Image]) -> str | None:
-    """同一类图案取多个样本投票，降低单格误判。"""
+    """同一类图案：多个样本 × 多组预处理一起投票。"""
     from collections import Counter
 
+    if not available():
+        return None
     votes: Counter[str] = Counter()
-    for cell in cells[:5]:
-        code = read_code(cell)
-        if code:
-            votes[code] += 1
+    for cell in cells[:4]:
+        for variant in VARIANTS:
+            code = normalise(_run_tesseract(cell, variant) or "")
+            if code:
+                votes[code] += 1
     if not votes:
         return None
     return votes.most_common(1)[0][0]

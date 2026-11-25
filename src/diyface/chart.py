@@ -16,9 +16,9 @@ import numpy as np
 from PIL import Image
 
 MIN_LINE_RATIO = 0.35
-CELL_PADDING = 0.10
+CELL_PADDING = 0.02
 CLUSTER_SIZE = 10
-HAMMING_TOLERANCE = 3
+HAMMING_TOLERANCE = 1
 MAX_CLUSTERS = 16
 
 
@@ -67,11 +67,31 @@ def _line_positions(mask: np.ndarray, axis: int) -> list[int]:
     return positions
 
 
+def _regular(positions: list[int], tolerance: float = 0.35) -> list[int]:
+    """只保留间距一致的线，滤掉界面边框、标题分隔线。"""
+    if len(positions) < 3:
+        return positions
+    diffs = [b - a for a, b in zip(positions, positions[1:])]
+    step = sorted(diffs)[len(diffs) // 2]
+    if step <= 0:
+        return positions
+    kept = [positions[0]]
+    for position in positions[1:]:
+        if abs((position - kept[-1]) - step) <= step * tolerance:
+            kept.append(position)
+    return kept
+
+
 def detect_grid(image: Image.Image) -> Grid | None:
     """从截图里找网格；找不到返回 None。"""
     mask = _dark_ratio(image)
     cols_lines = _line_positions(mask, axis=0)
     rows_lines = _line_positions(mask, axis=1)
+    if len(cols_lines) < 3 or len(rows_lines) < 3:
+        return None
+
+    cols_lines = _regular(cols_lines)
+    rows_lines = _regular(rows_lines)
     if len(cols_lines) < 3 or len(rows_lines) < 3:
         return None
 
@@ -97,8 +117,41 @@ def _cell_box(grid: Grid, row: int, col: int) -> tuple[int, int, int, int]:
     )
 
 
+def _strip_borders(cell: Image.Image, limit: int = 3) -> Image.Image:
+    """只擦掉真正是网格线的边（连续深色），不按固定比例，避免切掉色号。"""
+    import numpy as np
+
+    cleaned = cell.copy()
+    array = np.asarray(cleaned, dtype=np.uint8)
+    dark = array < 200
+
+    def is_line(vector: np.ndarray) -> bool:
+        return vector.size > 0 and vector.mean() > 0.55
+
+    # 上下边
+    for side in ("top", "bottom"):
+        for _ in range(limit):
+            row = dark[0, :] if side == "top" else dark[-1, :]
+            if not is_line(row):
+                break
+            cleaned.paste(255, (0, 0 if side == "top" else cleaned.height - 1, cleaned.width, (1 if side == "top" else cleaned.height)))
+            array = np.asarray(cleaned, dtype=np.uint8)
+            dark = array < 200
+    # 左右边
+    for side in ("left", "right"):
+        for _ in range(limit):
+            col = dark[:, 0] if side == "left" else dark[:, -1]
+            if not is_line(col):
+                break
+            x = 0 if side == "left" else cleaned.width - 1
+            cleaned.paste(255, (x, 0, x + 1, cleaned.height))
+            array = np.asarray(cleaned, dtype=np.uint8)
+            dark = array < 200
+    return cleaned
+
+
 def extract_cells(image: Image.Image, grid: Grid) -> list[list[Image.Image]]:
-    """按网格切出每个格子，返回二维列表。"""
+    """按网格切出每个格子（并擦掉边线），返回二维列表。"""
     result: list[list[Image.Image]] = []
     for row in range(grid.rows):
         line: list[Image.Image] = []
@@ -107,7 +160,7 @@ def extract_cells(image: Image.Image, grid: Grid) -> list[list[Image.Image]]:
             if box[2] - box[0] < 2 or box[3] - box[1] < 2:
                 line.append(Image.new("L", (CLUSTER_SIZE, CLUSTER_SIZE), 255))
                 continue
-            line.append(image.crop(box).convert("L"))
+            line.append(_strip_borders(image.crop(box).convert("L")))
         result.append(line)
     return result
 
