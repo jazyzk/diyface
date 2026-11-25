@@ -47,3 +47,9 @@ tools/
 # 构建产物
 dist/
 build/
+# 便携版 Tesseract（OCR 运行库，不入库）
+tesseract.exe
+*.dll
+tessdata/
+doc/
+*.1.html

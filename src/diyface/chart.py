@@ -16,9 +16,9 @@ import numpy as np
 from PIL import Image
 
 MIN_LINE_RATIO = 0.35
-CELL_PADDING = 0.18
+CELL_PADDING = 0.10
 CLUSTER_SIZE = 10
-HAMMING_TOLERANCE = 6
+HAMMING_TOLERANCE = 3
 MAX_CLUSTERS = 16
 
 
@@ -113,9 +113,26 @@ def extract_cells(image: Image.Image, grid: Grid) -> list[list[Image.Image]]:
 
 
 def _signature(cell: Image.Image) -> np.ndarray:
-    small = cell.resize((CLUSTER_SIZE, CLUSTER_SIZE), Image.BILINEAR)
-    array = np.asarray(small, dtype=np.float32)
-    return (array < 190).astype(np.uint8).flatten()
+    """先按内容包围盒居中，再缩放取指纹，消除文字位置抖动。"""
+    gray = cell.convert("L")
+    array = np.asarray(gray, dtype=np.uint8)
+    dark = array < 200
+    if not dark.any():
+        return np.zeros(CLUSTER_SIZE * CLUSTER_SIZE, dtype=np.uint8)
+
+    rows = np.where(dark.any(axis=1))[0]
+    cols = np.where(dark.any(axis=0))[0]
+    top, bottom = rows[0], rows[-1]
+    left, right = cols[0], cols[-1]
+    content = gray.crop((int(left), int(top), int(right) + 1, int(bottom) + 1))
+
+    # 等比放进正方形，避免宽高比影响指纹
+    side = max(content.width, content.height)
+    square = Image.new("L", (side, side), 255)
+    square.paste(content, ((side - content.width) // 2, (side - content.height) // 2))
+
+    small = square.resize((CLUSTER_SIZE, CLUSTER_SIZE), Image.BILINEAR)
+    return (np.asarray(small, dtype=np.float32) < 190).astype(np.uint8).flatten()
 
 
 def _preview(cell: Image.Image) -> str:
@@ -140,7 +157,7 @@ def cluster_cells(cells: list[list[Image.Image]]) -> list[dict]:
             if distance <= HAMMING_TOLERANCE:
                 group["signature"] = signature
                 group["cells"].append(position)
-                if len(group["samples"]) < 5:
+                if len(group["samples"]) < 8:
                     group["samples"].append(cell)
                 placed = True
                 break

@@ -5,6 +5,10 @@
 
 ## 安装（Windows）
 
+> 也可以把 **便携版** `tesseract.exe` + `tessdata/` 直接放到项目根目录（本仓库作者就是这么装的）。
+> 项目路径含中文时，程序会自动把 `tessdata` 复制到 `%LOCALAPPDATA%\diyface\tessdata`，
+> 因为 Tesseract 处理不了中文路径。
+
 1. **Tesseract-OCR**
 
    下载安装包（UB Mannheim 维护的 Windows 版）：
@@ -18,7 +22,7 @@
 
    装到别的目录也没关系，设置环境变量 `TESSERACT_CMD` 指向 `tesseract.exe` 即可。
 
-2. **pytesseract**（纯 Python，很小）
+2. **pytesseract**（仅用于定位引擎，可选；不装也能跑，程序直接调用 `tesseract.exe`）
 
    ```powershell
    & "D:\tools\Python314\python.exe" -m pip install pytesseract
@@ -55,7 +59,7 @@ cd D:\头像diy
 | 情况 | 结果 |
 |---|---|
 | 格子清晰、字号 ≥ 8px | 基本都能认对 |
-| 字体很花、格子太小 | 会漏认，需手动补 |
+| 字体很花、格子太小 | 会漏认；三字符色号（如 E15）在过窄的格子里可能被邻格截断，需手动补 |
 | 图纸只有颜色没有文字 | OCR 无用，请用「导入图片」 |
 
 OCR 是**辅助**，不是替代人工：最终仍建议扫一眼下拉框，确认每类颜色对不对。

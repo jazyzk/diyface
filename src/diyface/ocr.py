@@ -2,11 +2,10 @@
 
 依赖（用户自行安装，不装也能用）：
 
-* Tesseract-OCR（Windows 安装包）—— 提供 ``tesseract.exe``
-* ``pytesseract``（纯 Python 包）
+* Tesseract-OCR —— 提供 ``tesseract.exe``（可放在项目根目录、PATH 或默认安装位置）
+* 语言数据 ``tessdata/``（便携版自带；项目路径含中文时会自动复制到英文缓存目录）
 
-装好后本项目会自动启用：图纸导入时给每类图案预填色号，
-识别不准时用户仍可在下拉框里改。
+调用走子进程 stdout，避免受限环境里写不了临时输出文件的问题。
 """
 
 from __future__ import annotations
@@ -14,6 +13,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import subprocess
 from pathlib import Path
 
 from PIL import Image
@@ -24,11 +24,14 @@ WHITELIST = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 CODE_PATTERN = re.compile(r"^[A-Z]{1,2}[0-9]{1,2}$")
 
 #: OCR 常见混淆：把识别结果替换成更像色号的形式
-CONFUSIONS = str.maketrans({"O": "0", "I": "1", "S": "5", "B": "8", "Z": "2", "G": "6"})
+CONFUSIONS = str.maketrans({"O": "0", "I": "1", "S": "5", "Z": "2", "G": "6"})
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-#: Windows 安装包的默认位置（装完不重启也能用）
+#: 候选位置：项目目录（便携版）→ Windows 默认安装路径
 DEFAULT_PATHS = (
+    str(PROJECT_ROOT / "tesseract.exe"),
+    str(PROJECT_ROOT / "tools" / "tesseract.exe"),
     r"C:\Program Files\Tesseract-OCR\tesseract.exe",
     r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
 )
@@ -47,36 +50,89 @@ def _tesseract_path() -> str | None:
     return None
 
 
-def available() -> bool:
-    """OCR 是否可用：有 tesseract 可执行文件 + pytesseract 包。"""
-    if _tesseract_path() is None:
-        return False
+def _ascii_only(path: Path) -> bool:
     try:
-        import pytesseract
-    except Exception:
+        str(path).encode("ascii")
+    except UnicodeEncodeError:
         return False
-    pytesseract.pytesseract.tesseract_cmd = _tesseract_path()
     return True
 
 
+def _cache_root() -> Path:
+    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    return Path(base) / "diyface"
+
+
+def _tessdata() -> str | None:
+    """语言数据目录；项目路径含中文时复制到纯英文缓存。"""
+    for candidate in (PROJECT_ROOT / "tessdata", PROJECT_ROOT / "tools" / "tessdata"):
+        if not candidate.is_dir():
+            continue
+        if _ascii_only(candidate):
+            return str(candidate)
+        cache = _cache_root() / "tessdata"
+        cache.mkdir(parents=True, exist_ok=True)
+        for item in candidate.rglob("*.traineddata"):
+            target = cache / item.name
+            if not target.exists() or target.stat().st_size != item.stat().st_size:
+                shutil.copy2(item, target)
+        return str(cache)
+    return None
+
+
+def available() -> bool:
+    """OCR 是否可用：能找到 tesseract 和语言数据。"""
+    return _tesseract_path() is not None and _tessdata() is not None
+
+
 def _prepare(cell: Image.Image) -> Image.Image:
-    """放大 + 转灰度 + 二值化，小字号识别率更高。"""
+    """放大 + 灰度 + 二值化：小字号识别率更高。"""
     image = cell.convert("L")
-    image = image.resize((image.width * 5, image.height * 5), Image.LANCZOS)
-    return image.point(lambda value: 0 if value < 165 else 255)
+    image = image.resize((image.width * 6, image.height * 6), Image.LANCZOS)
+    return image.point(lambda value: 0 if value < 170 else 255)
 
 
-def read_code(cell: Image.Image) -> str | None:
-    """识别一个格子里的色号；识别失败或不是色号时返回 None。"""
-    if not available():
+def _run_tesseract(image: Image.Image) -> str | None:
+    binary = _tesseract_path()
+    data = _tessdata()
+    if binary is None or data is None:
         return None
-    import pytesseract
 
-    text = pytesseract.image_to_string(
-        _prepare(cell),
-        config="--psm 7 -c tessedit_char_whitelist=" + WHITELIST,
-    )
-    token = re.sub(r"\s+", "", text).upper()
+    workdir = _cache_root() / "tmp"
+    workdir.mkdir(parents=True, exist_ok=True)
+    path = workdir / "cell.png"
+    _prepare(image).save(path)
+
+    env = dict(os.environ)
+    env["TESSDATA_PREFIX"] = data
+    for psm in ("7", "8"):
+        try:
+            result = subprocess.run(
+                [
+                    binary,
+                    str(path),
+                    "stdout",
+                    "--psm",
+                    psm,
+                    "-c",
+                    f"tessedit_char_whitelist={WHITELIST}",
+                ],
+                capture_output=True,
+                timeout=20,
+                env=env,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if result.returncode == 0:
+            text = result.stdout.decode("utf-8", "replace")
+            if normalise(text):
+                return text
+    return None
+
+
+def normalise(text: str) -> str | None:
+    """把 OCR 文本清洗成合法色号；不是色号返回 None。"""
+    token = re.sub(r"[^A-Z0-9]", "", (text or "").upper())
     if not token:
         return None
     if token in MARD_ALL:
@@ -89,8 +145,15 @@ def read_code(cell: Image.Image) -> str | None:
     return None
 
 
+def read_code(cell: Image.Image) -> str | None:
+    """识别一个格子里的色号；失败返回 None。"""
+    if not available():
+        return None
+    return normalise(_run_tesseract(cell) or "")
+
+
 def vote_codes(cells: list[Image.Image]) -> str | None:
-    """对同一类图案的多个样本做投票，降低单次识别误差。"""
+    """同一类图案取多个样本投票，降低单格误判。"""
     from collections import Counter
 
     votes: Counter[str] = Counter()
