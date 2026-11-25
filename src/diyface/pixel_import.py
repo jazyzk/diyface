@@ -15,7 +15,7 @@ import math
 import numpy as np
 from PIL import Image
 
-from .mard import HEXES
+from .mard import CODES, HEXES, MARD_ALL
 
 GRID = 32
 ALPHA_CUTOFF = 128
@@ -43,6 +43,8 @@ def _to_lab(rgb: tuple[float, float, float]) -> np.ndarray:
     f = np.where(xyz > 0.008856, np.cbrt(xyz), (7.787 * xyz) + (16 / 116))
     return np.array([116 * f[1] - 16, 500 * (f[0] - f[1]), 200 * (f[1] - f[2])])
 
+
+_NEAREST_CACHE: dict[str, int] | None = None
 
 PALETTE_LAB = np.array([_to_lab(_rgb(hex_color)) for hex_color in HEXES])
 
@@ -97,6 +99,44 @@ def _despeckle(cells: list[int]) -> list[int]:
             winner, count = max(counts.items(), key=lambda item: item[1])
             if count >= 3 and winner != cells[index]:
                 result[index] = winner
+    return result
+
+
+def from_codes(text: str) -> tuple[list[int], list[str]]:
+    """把「色号文本」解析成画布：一行一行，空格/逗号分隔。
+
+    返回 (格子, 无法识别的色号列表)。未知色号留空，方便用户回查。
+    """
+    mapping = {code.upper(): index for index, code in enumerate(CODES)}
+    nearest = {code.upper(): index for code, index in _nearest_for_all().items()}
+    cells = [-1] * (GRID * GRID)
+    unknown: list[str] = []
+    rows = [row for row in text.strip().splitlines() if row.strip()]
+    for y, row in enumerate(rows[:GRID]):
+        tokens = [token for token in row.replace(",", " ").split() if token]
+        for x, token in enumerate(tokens[:GRID]):
+            code = token.upper()
+            if code in {"-", ".", "_", "·"}:
+                continue
+            if code in mapping:
+                cells[y * GRID + x] = mapping[code]
+            elif code in nearest:
+                cells[y * GRID + x] = nearest[code]
+            else:
+                unknown.append(code)
+    return cells, unknown
+
+
+def _nearest_for_all() -> dict[str, int]:
+    """295 色全表里每个色号，映射到调色板里最接近的一格。"""
+    global _NEAREST_CACHE
+    if _NEAREST_CACHE is not None:
+        return _NEAREST_CACHE
+    result: dict[str, int] = {}
+    for code, hex_color in MARD_ALL.items():
+        lab = _to_lab(_rgb(hex_color))
+        result[code] = int(np.argmin(np.linalg.norm(PALETTE_LAB - lab, axis=1)))
+    _NEAREST_CACHE = result
     return result
 
 

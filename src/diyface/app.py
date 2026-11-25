@@ -24,7 +24,7 @@ from .models import ACTIVE, SLOTS, AvatarRecipe, SlotId
 from .randomizer import random_recipe
 from .mard import CODES, HEXES
 from .pixel import CANVAS, PixelArt, PixelError, decode, encode as encode_pixels
-from .pixel_import import quantize, used_colors
+from .pixel_import import from_codes, quantize, used_colors
 from .pixel import render as render_pixel
 from .render import SIZES, render
 from .sticker import build as build_sticker
@@ -189,6 +189,27 @@ def api_pixel_import():
             "codes": CODES,
             "pixels": encode_pixels(cells),
             "colors": used_colors(cells),
+        }
+    )
+
+
+@app.post("/api/pixel/codes")
+def api_pixel_codes():
+    """把「色号文本」转成 32×32 画布（一行一行，空格分隔）。"""
+    payload = request.get_json(silent=True)
+    text = payload.get("text") if isinstance(payload, dict) else None
+    if not isinstance(text, str) or not text.strip():
+        return error(422, "INVALID_REQUEST", "请提供色号文本", field="text")
+
+    cells, unknown = from_codes(text)
+    return jsonify(
+        {
+            "size": 32,
+            "palette": HEXES,
+            "codes": CODES,
+            "pixels": encode_pixels(cells),
+            "colors": used_colors(cells),
+            "unknown": sorted(set(unknown))[:20],
         }
     )
 

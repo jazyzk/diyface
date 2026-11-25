@@ -84,6 +84,7 @@ python -m diyface render tests/fixtures/recipes/base.json --out out.png
 | GET | `/pixel` | 拼豆画布页面（32×32 自由填色） |
 | POST | `/api/pixel/render` | 拼豆画布渲染成 PNG |
 | POST | `/api/pixel/import` | 上传图片，转成 32×32 拼豆画布 |
+| POST | `/api/pixel/codes` | 色号文本 → 32×32 画布 |
 | GET | `/healthz` | ok、version、slots、assets |
 | GET | `/assets/<path:filename>` | 素材与缩略图 |
 

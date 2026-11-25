@@ -393,6 +393,35 @@ document.getElementById("import-file").addEventListener("change", async (event) 
   }
 });
 
+document.getElementById("toggle-codes").addEventListener("click", () => {
+  const box = document.getElementById("codes-box");
+  box.hidden = !box.hidden;
+  if (!box.hidden) document.getElementById("codes-text").focus();
+});
+
+document.getElementById("codes-apply").addEventListener("click", async () => {
+  const text = document.getElementById("codes-text").value;
+  if (!text.trim()) return say("先把色号粘进来");
+  try {
+    const response = await fetch("/api/pixel/codes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.error?.message || "解析失败");
+    const cells = decode(data.pixels);
+    if (!cells) throw new Error("返回的画布无法解析");
+    pushHistory();
+    state.cells = cells;
+    flush();
+    const unknown = data.unknown?.length ? `，未识别：${data.unknown.join(" ")}` : "";
+    say(`已生成：${data.colors} 种颜色${unknown}`);
+  } catch (error) {
+    say(error.message);
+  }
+});
+
 document.getElementById("to-avatar").addEventListener("click", () => {
   const KEY = "diyface.stickers.v2";
   try {
