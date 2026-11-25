@@ -468,3 +468,27 @@ class TestReproduceDoc(unittest.TestCase):
 
         self.assertIn("tesseract", text.lower())
         self.assertIn("没有进仓库", text)
+
+
+class TestAgentTaskCard(unittest.TestCase):
+    """发给别人 DSH 的任务卡必须包含可执行命令与验收标准。"""
+
+    def test_agent_task_card(self) -> None:
+        text = (ROOT / "docs" / "AGENT-TASK.md").read_text(encoding="utf-8")
+
+        for token in (
+            "feat/flask-contract",
+            "pip install -e",
+            "python scripts/doctor.py",
+            "python -m pytest -q",
+            "python -m diyface verify",
+            "/healthz",
+            "179",
+        ):
+            self.assertIn(token, text, f"任务卡缺少：{token}")
+
+    def test_agent_task_card_lists_guardrails(self) -> None:
+        text = (ROOT / "docs" / "AGENT-TASK.md").read_text(encoding="utf-8")
+
+        self.assertIn("不要提交", text)
+        self.assertIn("tests/reports/", text)
