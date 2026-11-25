@@ -65,6 +65,7 @@ python -m diyface render tests/fixtures/recipes/base.json --out out.png
 | `src/diyface/guide.py` | 画素材用的参考线图 |
 | `src/diyface/bench.py` | 渲染耗时测量 |
 | `src/diyface/pixel.py` | 32×32 拼豆画布：RLE 编解码与 PNG 渲染 |
+| `src/diyface/pixel_import.py` | 上传图片 → 32×32 网格（Lab 最近色匹配 Mard 色板） |
 | `src/diyface/backdrop.py` | 像素背景预设（规则图案，运行时生成） |
 | `src/diyface/mard.py` | Mard 官方色卡 64 色（色号 + 色值），前端色板的来源 |
 | `src/diyface/sticker.py` | 拼豆图裁切缩放，贴到头像右下角 |
@@ -82,6 +83,7 @@ python -m diyface render tests/fixtures/recipes/base.json --out out.png
 | POST | `/api/random` | 合法随机配方，可带 seed |
 | GET | `/pixel` | 拼豆画布页面（32×32 自由填色） |
 | POST | `/api/pixel/render` | 拼豆画布渲染成 PNG |
+| POST | `/api/pixel/import` | 上传图片，转成 32×32 拼豆画布 |
 | GET | `/healthz` | ok、version、slots、assets |
 | GET | `/assets/<path:filename>` | 素材与缩略图 |
 

@@ -22,7 +22,9 @@ from .catalog import index as build_index
 from .catalog import style_of
 from .models import ACTIVE, SLOTS, AvatarRecipe, SlotId
 from .randomizer import random_recipe
-from .pixel import CANVAS, PixelArt, PixelError, decode
+from .mard import CODES, HEXES
+from .pixel import CANVAS, PixelArt, PixelError, decode, encode as encode_pixels
+from .pixel_import import quantize, used_colors
 from .pixel import render as render_pixel
 from .render import SIZES, render
 from .sticker import build as build_sticker
@@ -154,6 +156,40 @@ def api_pixel_render():
         png,
         mimetype="image/png",
         headers={"ETag": etag, "Cache-Control": "public, max-age=86400"},
+    )
+
+
+MAX_UPLOAD_BYTES = 8 * 1024 * 1024
+
+
+@app.post("/api/pixel/import")
+def api_pixel_import():
+    """把上传的图片转成 32×32 拼豆画布。"""
+    upload = request.files.get("image")
+    if upload is None or not upload.filename:
+        return error(422, "INVALID_REQUEST", "请上传一张图片", field="image")
+
+    raw = upload.read(MAX_UPLOAD_BYTES + 1)
+    if len(raw) > MAX_UPLOAD_BYTES:
+        return error(422, "INVALID_REQUEST", "图片不能超过 8MB", field="image")
+
+    try:
+        from io import BytesIO
+
+        image = Image.open(BytesIO(raw))
+        image.load()
+    except Exception:
+        return error(422, "INVALID_REQUEST", "无法解析这张图片", field="image")
+
+    cells = quantize(image)
+    return jsonify(
+        {
+            "size": 32,
+            "palette": HEXES,
+            "codes": CODES,
+            "pixels": encode_pixels(cells),
+            "colors": used_colors(cells),
+        }
     )
 
 

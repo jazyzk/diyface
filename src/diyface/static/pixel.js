@@ -363,6 +363,36 @@ document.getElementById("share").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("import-image").addEventListener("click", () => {
+  document.getElementById("import-file").click();
+});
+
+document.getElementById("import-file").addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  say("正在识别图片…");
+  try {
+    const form = new FormData();
+    form.append("image", file);
+    const response = await fetch("/api/pixel/import", { method: "POST", body: form });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload?.error?.message || `导入失败（${response.status}）`);
+    }
+    const data = await response.json();
+    const cells = decode(data.pixels);
+    if (!cells) throw new Error("服务端返回的画布无法解析");
+    pushHistory();
+    state.cells = cells;
+    flush();
+    say(`已导入：${data.colors} 种颜色，${cells.filter((v) => v >= 0).length} 颗珠子`);
+  } catch (error) {
+    say(error.message);
+  } finally {
+    event.target.value = "";
+  }
+});
+
 document.getElementById("to-avatar").addEventListener("click", () => {
   const KEY = "diyface.stickers.v2";
   try {
