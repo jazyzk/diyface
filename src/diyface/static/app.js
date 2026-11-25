@@ -741,6 +741,8 @@ function schedulePreview() {
 async function refreshPreview() {
   clearTimeout(state.debounceTimer);
   if (!state.recipe) return;
+  // 本地存档里可能残留旧素材 id（例如服务重启后素材变了），预览前先按清单校正
+  if (state.manifest) state.recipe = sanitizeRecipe(state.recipe, state.manifest);
 
   const mine = ++state.seq;
   if (state.controller) state.controller.abort();
