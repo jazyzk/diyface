@@ -146,9 +146,9 @@ def test_frontend_palette_matches_share_palette() -> None:
 
 def test_mard_white_is_h2() -> None:
     """Mard 色卡里白色就是 H2，和实物一致。"""
-    from diyface.mard import MARD_64
+    from diyface.mard import MARD_128
 
-    assert MARD_64[0] == ("H2", "#FFFFFF")
+    assert MARD_128[0] == ("H2", "#FFFFFF")
 
 
 def test_mard_palette_is_single_source_of_truth() -> None:
@@ -159,8 +159,8 @@ def test_mard_palette_is_single_source_of_truth() -> None:
     from diyface.mard import CODES, HEXES
 
     root = _Path(__file__).resolve().parents[1] / "src" / "diyface" / "static"
-    assert len(HEXES) == MAX_COLORS == 64
-    assert len(set(CODES)) == 64, "色号不能重复"
+    assert len(HEXES) == MAX_COLORS == 128
+    assert len(set(CODES)) == 128, "色号不能重复"
 
     pixel = (root / "pixel.js").read_text(encoding="utf-8")
     app = (root / "app.js").read_text(encoding="utf-8")

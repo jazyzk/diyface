@@ -107,5 +107,5 @@ def test_api_returns_canvas() -> None:
     body = response.get_json()
     assert response.status_code == 200
     assert body["size"] == 32
-    assert len(body["palette"]) == 64
+    assert len(body["palette"]) == 128
     assert decode(body["pixels"]), "返回的 RLE 必须能解回 1024 格"
