@@ -1052,13 +1052,247 @@ def mouth(kind: str, color: str) -> CELLMAP:  # noqa: F811
     return cells
 
 
+
+# ======================================================================
+# 第四代：方块脸回归 + 更丰富的头发/眼睛/嘴/眼镜
+# 布局参考 DiceBear pixel-art（CC0）的部件分类，画法为本项目自有实现
+# ======================================================================
+
+FACE_SHAPES_V4 = {
+    "round": (9, 22, 8, 25),
+    "square": (8, 23, 8, 26),
+    "long": (10, 21, 7, 27),
+}
+
+SKIN_SHADE = "#CFCFCF"
+SKIN_SHADE_2 = "#E3E3E3"
+
+
+def face(shape: str) -> CELLMAP:  # noqa: F811
+    left, right, top, bottom = FACE_SHAPES_V4.get(shape, FACE_SHAPES_V4["round"])
+    cells: CELLMAP = {}
+    for y in range(top, bottom + 1):
+        for x in range(left, right + 1):
+            cells[(x, y)] = WHITE
+
+    # 切角，保持方块感但不要太硬
+    for x, y in (
+        (left, top), (right, top), (left, bottom), (right, bottom),
+    ):
+        cells.pop((x, y), None)
+
+    # 右侧与下巴阴影
+    for y in range(top + 1, bottom):
+        cells[(right, y)] = SKIN_SHADE
+    for x in range(left + 1, right):
+        cells[(x, bottom)] = SKIN_SHADE
+    for x in range(left + 2, right - 1):
+        cells[(x, bottom - 1)] = SKIN_SHADE_2
+
+    # 鼻子
+    cells[(15, bottom - 7)] = SKIN_SHADE
+    cells[(16, bottom - 7)] = SKIN_SHADE
+
+    # 耳朵
+    for y in (top + 6, top + 7, top + 8):
+        cells[(left - 1, y)] = WHITE
+        cells[(right + 1, y)] = SKIN_SHADE
+
+    edge: CELLMAP = {}
+    for (x, y) in list(cells):
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            neighbour = (x + dx, y + dy)
+            if neighbour not in cells:
+                edge[neighbour] = INK
+    cells.update(edge)
+    return cells
+
+
+HAIR_KINDS_V4 = [
+    "short", "bob", "long", "bun", "mohawk", "side",
+    "twin", "pony", "afro", "fringe", "curly", "bald",
+]
+
+
+def hair(kind: str) -> CELLMAP:  # noqa: F811
+    MAIN, SHADOW, LIGHT = "#F2F2F2", "#C9C9C9", "#FFFFFF"
+    cells: CELLMAP = {}
+
+    def cap(x0=8, y0=6, x1=23, y1=10) -> None:
+        rect(cells, x0, y0, x1, y1, MAIN)
+        rect(cells, x0, y0, x1, y0, LIGHT)
+        rect(cells, x0, y1, x1, y1, SHADOW)
+
+    if kind == "bald":
+        for y in (11, 12):
+            cells[(8, y)] = MAIN
+            cells[(23, y)] = MAIN
+        return cells
+
+    if kind == "mohawk":
+        rect(cells, 15, 3, 16, 11, MAIN)
+        rect(cells, 16, 3, 16, 11, SHADOW)
+        rect(cells, 14, 8, 14, 10, MAIN)
+        rect(cells, 17, 8, 17, 10, MAIN)
+        return cells
+
+    if kind == "afro":
+        rect(cells, 6, 4, 25, 11, MAIN)
+        for x, y in ((6, 4), (25, 4), (6, 11), (25, 11)):
+            cells.pop((x, y), None)
+        rect(cells, 9, 4, 22, 4, LIGHT)
+        rect(cells, 6, 11, 25, 11, SHADOW)
+        return cells
+
+    if kind == "bun":
+        cap()
+        rect(cells, 14, 2, 17, 5, MAIN)
+        rect(cells, 16, 2, 17, 5, SHADOW)
+        return cells
+
+    cap()
+
+    if kind == "short":
+        rect(cells, 8, 11, 9, 12, MAIN)
+        rect(cells, 22, 11, 23, 12, SHADOW)
+    elif kind == "bob":
+        rect(cells, 7, 11, 8, 20, MAIN)
+        rect(cells, 23, 11, 24, 20, SHADOW)
+    elif kind == "long":
+        rect(cells, 7, 11, 8, 27, MAIN)
+        rect(cells, 23, 11, 24, 27, SHADOW)
+        rect(cells, 9, 13, 9, 22, SHADOW)
+    elif kind == "side":
+        rect(cells, 18, 10, 23, 15, MAIN)
+        rect(cells, 19, 10, 23, 11, LIGHT)
+        rect(cells, 8, 11, 9, 13, SHADOW)
+    elif kind == "twin":
+        rect(cells, 6, 11, 8, 24, MAIN)
+        rect(cells, 22, 11, 24, 24, SHADOW)
+        rect(cells, 6, 24, 8, 25, SHADOW)
+    elif kind == "pony":
+        rect(cells, 20, 11, 23, 15, SHADOW)
+        rect(cells, 22, 15, 23, 26, MAIN)
+        rect(cells, 22, 26, 23, 27, SHADOW)
+    elif kind == "fringe":
+        rect(cells, 9, 11, 22, 11, SHADOW)
+        rect(cells, 10, 12, 14, 12, SHADOW)
+    elif kind == "curly":
+        for x in range(7, 25, 3):
+            rect(cells, x, 11, x + 1, 13, SHADOW)
+    return cells
+
+
+EYE_ART_V4 = {
+    "dot": ["....", ".KK.", ".KK.", "...."],
+    "big": ["KKKK", "DWDD", "IDDI", "LIIL"],
+    "sparkle": ["KKKK", "DWDW", "IDDI", "LIWL"],
+    "wink": ["KKKK", "DWDD", "IDDI", "LIIL"],
+    "sleepy": ["....", "KKKK", "IDDI", "LIIL"],
+    "sharp": ["KK..", ".KKK", ".DWD", "..LI"],
+    "happy": ["....", ".KK.", "K..K", "...."],
+    "closed": ["....", "....", "KKKK", "...."],
+}
+
+EYE_KINDS_V4 = list(EYE_ART_V4)
+
+
+def eyes(kind: str, color: str) -> CELLMAP:  # noqa: F811
+    art = EYE_ART_V4.get(kind, EYE_ART_V4["big"])
+    cells: CELLMAP = {}
+    for start_x in (11, 18):
+        for row, line in enumerate(art):
+            for col, mark in enumerate(line):
+                if mark == ".":
+                    continue
+                cells[(start_x + col, 13 + row)] = EYE_COLORS.get(mark, color)
+    if kind == "wink":
+        for x in range(11, 15):
+            for y in range(13, 17):
+                cells.pop((x, y), None)
+        for x in range(11, 15):
+            cells[(x, 15)] = INK
+    return cells
+
+
+BROW_ART_V4 = {"flat": ["BBBB"], "arch": [".BB."], "thick": ["BBBB", "BBBB"]}
+
+
+def brows(kind: str) -> CELLMAP:  # noqa: F811
+    art = BROW_ART_V4.get(kind, BROW_ART_V4["flat"])
+    cells: CELLMAP = {}
+    for start_x in (11, 18):
+        for row, line in enumerate(art):
+            for col, mark in enumerate(line):
+                if mark != ".":
+                    cells[(start_x + col, 11 + row)] = BROW_COLOR
+    return cells
+
+
+MOUTH_ART_V4 = {
+    "smile": ["K..K", ".KK."],
+    "laugh": ["KWWK", ".KK."],
+    "neutral": [".KK."],
+    "smirk": ["...K", ".KK."],
+    "open": ["KKK", "MTM"],
+    "cat": ["K.K.K", ".K.K."],
+    "tongue": ["KKKK", ".TT."],
+    "o": [".K.", "KMK", ".K."],
+}
+
+MOUTH_KINDS_V4 = list(MOUTH_ART_V4)
+
+
+def mouth(kind: str, color: str) -> CELLMAP:  # noqa: F811
+    art = MOUTH_ART_V4.get(kind, MOUTH_ART_V4["smile"])
+    cells: CELLMAP = {}
+    start_x = 14 - (len(art[0]) - 4) // 2
+    start_y = 20
+    for row, line in enumerate(art):
+        for col, mark in enumerate(line):
+            if mark == ".":
+                continue
+            cells[(start_x + col, start_y + row)] = MOUTH_COLORS.get(mark, color)
+    return cells
+
+
+GLASSES_KINDS_V4 = ["square", "round", "shades", "thin", "sport"]
+
+
+def glasses(kind: str) -> CELLMAP:  # noqa: F811
+    cells: CELLMAP = {}
+    if kind == "square":
+        for side in (10, 18):
+            ring(cells, side, 12, side + 4, 16, INK)
+        rect(cells, 15, 14, 16, 14, INK)
+    elif kind == "round":
+        for side in (10, 18):
+            ring(cells, side, 13, side + 4, 16, INK)
+        rect(cells, 15, 14, 16, 14, INK)
+    elif kind == "shades":
+        for side in (10, 18):
+            rect(cells, side, 13, side + 4, 15, INK)
+        rect(cells, 15, 14, 16, 14, INK)
+    elif kind == "thin":
+        for side in (10, 18):
+            rect(cells, side, 14, side + 4, 14, INK)
+        rect(cells, 15, 14, 16, 14, INK)
+    else:  # sport
+        for side in (9, 17):
+            rect(cells, side, 13, side + 5, 15, INK)
+            cells[(side + 1, 13)] = "#4A90D9"
+            cells[(side + 3, 13)] = "#4A90D9"
+        rect(cells, 15, 14, 16, 14, INK)
+    return cells
+
+
 JOBS: list[tuple[str, str, bool, list[tuple[str, CELLMAP]]]] = [
     ("01_skin", "skin", True, [(name, face(name)) for name in ("round", "square", "long")]),
-    ("04_hair", "hair", True, [(kind, hair(kind)) for kind in HAIR_STYLES]),
-    ("05_eyes", "eyes", False, [(kind, eyes(kind, DARK)) for kind in EYE_SHAPES]),
+    ("04_hair", "hair", True, [(kind, hair(kind)) for kind in HAIR_KINDS_V4]),
+    ("05_eyes", "eyes", False, [(kind, eyes(kind, DARK)) for kind in EYE_KINDS_V4]),
     ("06_brows", "brows", True, [(kind, brows(kind)) for kind in BROW_SHAPES]),
-    ("07_mouth", "mouth", False, [(kind, mouth(kind, "#C0504D")) for kind in MOUTH_SHAPES]),
-    ("08_glasses", "glasses", False, [(kind, glasses(kind)) for kind in GLASSES_SHAPES]),
+    ("07_mouth", "mouth", False, [(kind, mouth(kind, "#C0504D")) for kind in MOUTH_KINDS_V4]),
+    ("08_glasses", "glasses", False, [(kind, glasses(kind)) for kind in GLASSES_KINDS_V4]),
     ("10_extra", "extra", False, [(name, parse_art(art, anchor)) for name, art, anchor in DECORS]),
     ("01_skin", "subject", False, [(name, parse_sprite(art)) for name, art in SUBJECTS]),
 ]
