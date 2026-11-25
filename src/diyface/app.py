@@ -22,8 +22,9 @@ from .catalog import index as build_index
 from .catalog import style_of
 from .models import ACTIVE, SLOTS, AvatarRecipe, SlotId
 from .randomizer import random_recipe
-from .mard import CODES, HEXES
+from .mard import CODES, HEXES, MARD_ALL
 from .pixel import CANVAS, PixelArt, PixelError, decode, encode as encode_pixels
+from .chart import cluster_cells, detect_grid, extract_cells
 from .pixel_import import from_codes, quantize, used_colors
 from .pixel import render as render_pixel
 from .render import SIZES, render
@@ -210,6 +211,46 @@ def api_pixel_codes():
             "pixels": encode_pixels(cells),
             "colors": used_colors(cells),
             "unknown": sorted(set(unknown))[:20],
+        }
+    )
+
+
+@app.post("/api/pixel/chart")
+def api_pixel_chart():
+    """从色号图纸截图里切出网格，并把相同图案的格子聚类。"""
+    upload = request.files.get("image")
+    if upload is None or not upload.filename:
+        return error(422, "INVALID_REQUEST", "请上传一张图纸截图", field="image")
+
+    raw = upload.read(MAX_UPLOAD_BYTES + 1)
+    if len(raw) > MAX_UPLOAD_BYTES:
+        return error(422, "INVALID_REQUEST", "图片不能超过 8MB", field="image")
+
+    try:
+        from io import BytesIO
+
+        image = Image.open(BytesIO(raw))
+        image.load()
+    except Exception:
+        return error(422, "INVALID_REQUEST", "无法解析这张图片", field="image")
+
+    grid = detect_grid(image)
+    if grid is None:
+        return error(
+            422,
+            "INVALID_REQUEST",
+            "没有找到网格，请把图纸区域裁出来再试",
+            field="image",
+        )
+
+    cells = extract_cells(image, grid)
+    clusters = cluster_cells(cells)
+    return jsonify(
+        {
+            "rows": grid.rows,
+            "cols": grid.cols,
+            "clusters": clusters,
+            "codes": sorted(MARD_ALL),
         }
     )
 

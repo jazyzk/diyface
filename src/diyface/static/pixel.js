@@ -422,6 +422,103 @@ document.getElementById("codes-apply").addEventListener("click", async () => {
   }
 });
 
+let chartState = null;
+
+document.getElementById("import-chart").addEventListener("click", () => {
+  document.getElementById("chart-file").click();
+});
+
+document.getElementById("chart-file").addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  say("正在找网格…");
+  try {
+    const form = new FormData();
+    form.append("image", file);
+    const response = await fetch("/api/pixel/chart", { method: "POST", body: form });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.error?.message || "识别失败");
+
+    chartState = data;
+    renderChartClusters(data);
+    document.getElementById("chart-box").hidden = false;
+    say(`识别到 ${data.rows}×${data.cols} 网格，${data.clusters.length} 种图案`);
+  } catch (error) {
+    say(error.message);
+  } finally {
+    event.target.value = "";
+  }
+});
+
+function renderChartClusters(data) {
+  const box = document.getElementById("chart-clusters");
+  document.getElementById("chart-size").textContent = `${data.rows} 行 × ${data.cols} 列`;
+  const rows = data.clusters.map((cluster, index) => {
+    const row = document.createElement("div");
+    row.className = "chart-cluster";
+
+    const img = document.createElement("img");
+    img.src = `data:image/png;base64,${cluster.preview}`;
+    img.alt = `图案 ${index + 1}`;
+
+    const select = document.createElement("select");
+    select.dataset.clusterId = String(cluster.id);
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = `空（${cluster.count} 格）`;
+    select.append(empty);
+    for (const code of data.codes || []) {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = code;
+      select.append(option);
+    }
+    // 数量最多的那一类默认当空格
+    if (index === 0) select.value = "";
+
+    row.append(img, select);
+    return row;
+  });
+  box.replaceChildren(...rows);
+}
+
+document.getElementById("chart-apply").addEventListener("click", async () => {
+  if (!chartState) return;
+  const mapping = new Map();
+  for (const select of document.querySelectorAll("#chart-clusters select")) {
+    mapping.set(Number(select.dataset.clusterId), select.value);
+  }
+
+  const grid = Array.from({ length: chartState.rows }, () =>
+    Array.from({ length: chartState.cols }, () => "-")
+  );
+  for (const cluster of chartState.clusters) {
+    const code = mapping.get(cluster.id);
+    if (!code) continue;
+    for (const [row, col] of cluster.cells) {
+      if (row < chartState.rows && col < chartState.cols) grid[row][col] = code;
+    }
+  }
+
+  const text = grid.map((line) => line.join(" ")).join("\n");
+  try {
+    const response = await fetch("/api/pixel/codes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.error?.message || "生成失败");
+    const cells = decode(data.pixels);
+    pushHistory();
+    state.cells = cells;
+    flush();
+    say(`图纸已生成：${data.colors} 种颜色`);
+  } catch (error) {
+    say(error.message);
+  }
+});
+
 document.getElementById("to-avatar").addEventListener("click", () => {
   const KEY = "diyface.stickers.v2";
   try {
