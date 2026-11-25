@@ -109,6 +109,7 @@ docs/                   计划书、协作指南、任务说明、迁移说明
 
 - [部署：让别人打开网址就能用](docs/DEPLOY.md)
 - [免费二级域名上线（不买域名、不备案）](docs/DEPLOY-FREE.md)
+- [换台电脑复现 / 交给别的代理复现](docs/REPRODUCE.md)
 - [可选 OCR：图纸截图自动认色号](docs/OCR.md)
 - [契约迁移说明 v2](docs/MIGRATION-v2.md)（10 槽位 / Flask / 80KB，必读）
 - [实施计划书](docs/PLAN.md)

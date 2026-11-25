@@ -445,3 +445,26 @@ class TestWeekPlan(MarkdownDocChecks, unittest.TestCase):
 
 #: 角色简报：字母 -> (文件, 必须出现的关键内容)
 
+
+class TestReproduceDoc(unittest.TestCase):
+    """换机复现文档要能照着跑，命令缺一个都会让人卡住。"""
+
+    def test_reproduce_doc_is_actionable(self) -> None:
+        text = (ROOT / "docs" / "REPRODUCE.md").read_text(encoding="utf-8")
+
+        for token in (
+            "git clone https://gitee.com/chords-of-fate/diyface.git",
+            "pip install -e",
+            "python scripts/doctor.py",
+            "python -m pytest -q",
+            "python -m diyface verify",
+            "/healthz",
+            "render.yaml",
+        ):
+            self.assertIn(token, text, f"复现文档缺少：{token}")
+
+    def test_reproduce_doc_states_ocr_gap(self) -> None:
+        text = (ROOT / "docs" / "REPRODUCE.md").read_text(encoding="utf-8")
+
+        self.assertIn("tesseract", text.lower())
+        self.assertIn("没有进仓库", text)
