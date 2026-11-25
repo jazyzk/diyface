@@ -450,7 +450,8 @@ document.getElementById("chart-file").addEventListener("change", async (event) =
     chartState = data;
     renderChartClusters(data);
     document.getElementById("chart-box").hidden = false;
-    say(`识别到 ${data.rows}×${data.cols} 网格，${data.clusters.length} 种图案`);
+    const hint = data.ocr ? "（已用 OCR 预填色号，请核对）" : "（未安装 OCR，请手动指定色号）";
+    say(`识别到 ${data.rows}×${data.cols} 网格，${data.clusters.length} 种图案 ${hint}`);
   } catch (error) {
     say(error.message);
   } finally {
@@ -481,8 +482,9 @@ function renderChartClusters(data) {
       option.textContent = code;
       select.append(option);
     }
-    // 数量最多的那一类默认当空格
+    // 数量最多的那一类默认当空格；其余优先用 OCR 建议
     if (index === 0) select.value = "";
+    else if (cluster.suggestion) select.value = cluster.suggestion;
 
     row.append(img, select);
     return row;

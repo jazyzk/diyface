@@ -25,6 +25,8 @@ from .randomizer import random_recipe
 from .mard import CODES, HEXES, MARD_ALL
 from .pixel import CANVAS, PixelArt, PixelError, decode, encode as encode_pixels
 from .chart import cluster_cells, detect_grid, extract_cells
+from .ocr import available as ocr_available
+from .ocr import vote_codes
 from .pixel_import import from_codes, quantize, used_colors
 from .pixel import render as render_pixel
 from .render import SIZES, render
@@ -245,12 +247,17 @@ def api_pixel_chart():
 
     cells = extract_cells(image, grid)
     clusters = cluster_cells(cells)
+    use_ocr = ocr_available()
+    for cluster in clusters:
+        cluster["suggestion"] = vote_codes(cluster.pop("samples")) if use_ocr else None
+        cluster.pop("samples", None)
     return jsonify(
         {
             "rows": grid.rows,
             "cols": grid.cols,
             "clusters": clusters,
             "codes": sorted(MARD_ALL),
+            "ocr": use_ocr,
         }
     )
 

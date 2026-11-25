@@ -140,6 +140,8 @@ def cluster_cells(cells: list[list[Image.Image]]) -> list[dict]:
             if distance <= HAMMING_TOLERANCE:
                 group["signature"] = signature
                 group["cells"].append(position)
+                if len(group["samples"]) < 5:
+                    group["samples"].append(cell)
                 placed = True
                 break
         if not placed:
@@ -148,7 +150,7 @@ def cluster_cells(cells: list[list[Image.Image]]) -> list[dict]:
                     "signature": signature,
                     "preview": _preview(cell),
                     "cells": [position],
-                    "sample": cell,
+                    "samples": [cell],
                 }
             )
 
@@ -162,6 +164,7 @@ def cluster_cells(cells: list[list[Image.Image]]) -> list[dict]:
             "count": len(group["cells"]),
             "preview": group["preview"],
             "cells": [list(position) for position in group["cells"]],
+            "samples": group["samples"],
         }
         for index, group in enumerate(groups)
     ]

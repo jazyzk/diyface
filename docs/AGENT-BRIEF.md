@@ -67,6 +67,7 @@ python -m diyface render tests/fixtures/recipes/base.json --out out.png
 | `src/diyface/pixel.py` | 32×32 拼豆画布：RLE 编解码与 PNG 渲染 |
 | `src/diyface/pixel_import.py` | 上传图片 → 32×32 网格（Lab 最近色匹配 Mard 色板） |
 | `src/diyface/chart.py` | 图纸截图 → 网格检测 + 格子图案聚类 |
+| `src/diyface/ocr.py` | 可选 OCR：读图纸格子里的色号（需 tesseract + pytesseract） |
 | `src/diyface/backdrop.py` | 像素背景预设（规则图案，运行时生成） |
 | `src/diyface/mard.py` | Mard 官方色卡 64 色（色号 + 色值），前端色板的来源 |
 | `src/diyface/sticker.py` | 拼豆图裁切缩放，贴到头像右下角 |
