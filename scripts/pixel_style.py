@@ -854,120 +854,201 @@ def face(shape: str) -> CELLMAP:  # noqa: F811 - 覆盖第一代实现
     return cells
 
 
+HAIR_MAIN = "#F2F2F2"
+HAIR_SHADOW = "#C9C9C9"
+HAIR_LIGHT = "#FFFFFF"
+
+
+def _cap(x: int, y: int) -> bool:
+    dx = (x + 0.5 - 16) / 8.9
+    dy = (y + 0.5 - 13.0) / 8.6
+    return dx * dx + dy * dy <= 1.0 and y <= 12
+
+
 def hair(kind: str) -> CELLMAP:  # noqa: F811
-    MAIN = "#F2F2F2"      # 主色（相乘后就是发色）
-    SHADOW = "#C9C9C9"    # 阴影
-    LIGHT = "#FFFFFF"     # 高光
     cells: CELLMAP = {}
 
-    def cap(x0: int, y0: int, x1: int, y1: int) -> None:
-        rect(cells, x0, y0, x1, y1, MAIN)
-        rect(cells, x0, y1, x1, y1, SHADOW)
-        rect(cells, x0 + 2, y0 + 1, x1 - 2, y0 + 1, LIGHT)
+    if kind not in ("bun", "mohawk"):
+        for y in range(3, 13):
+            for x in range(32):
+                if _cap(x, y):
+                    cells[(x, y)] = HAIR_MAIN
+        for x in range(32):
+            if cells.get((x, 12)) == HAIR_MAIN:
+                cells[(x, 12)] = HAIR_SHADOW
+        for x in range(32):
+            if cells.get((x, 7)) == HAIR_MAIN:
+                cells[(x, 7)] = HAIR_LIGHT
 
     if kind == "short":
-        cap(8, 6, 23, 10)
-        rect(cells, 8, 10, 9, 11, SHADOW)
-        rect(cells, 22, 10, 23, 11, SHADOW)
+        for y in range(11, 14):
+            for x in (8, 9, 22, 23):
+                if _cap(x, y):
+                    cells[(x, y)] = HAIR_SHADOW
     elif kind == "bob":
-        cap(7, 5, 24, 10)
-        rect(cells, 7, 10, 7, 20, MAIN)
-        rect(cells, 24, 10, 24, 20, SHADOW)
+        for y in range(12, 21):
+            for x in (8, 9, 22, 23):
+                cells[(x, y)] = HAIR_MAIN
+            for x in (9, 22):
+                cells[(x, y)] = HAIR_SHADOW
     elif kind == "long":
-        cap(7, 5, 24, 10)
-        rect(cells, 7, 10, 7, 27, MAIN)
-        rect(cells, 24, 10, 24, 27, SHADOW)
-        rect(cells, 9, 12, 9, 22, SHADOW)
+        for y in range(12, 28):
+            for x in (7, 8, 9, 22, 23, 24):
+                cells[(x, y)] = HAIR_MAIN
+            for x in (9, 22):
+                cells[(x, y)] = HAIR_SHADOW
     elif kind == "bun":
-        cap(8, 7, 23, 10)
-        rect(cells, 14, 3, 17, 6, MAIN)
-        rect(cells, 16, 3, 17, 6, SHADOW)
-    elif kind == "mohawk":
-        rect(cells, 15, 3, 16, 11, MAIN)
-        rect(cells, 16, 3, 16, 11, SHADOW)
-        rect(cells, 14, 4, 14, 8, MAIN)
-        rect(cells, 17, 4, 17, 8, SHADOW)
-    else:  # side
-        cap(8, 5, 23, 9)
-        rect(cells, 20, 9, 23, 15, MAIN)
-        rect(cells, 23, 9, 23, 15, SHADOW)
-        rect(cells, 8, 9, 9, 13, SHADOW)
+        for y in range(5, 13):
+            for x in range(9, 23):
+                if _cap(x, y) or y >= 11:
+                    cells[(x, y)] = HAIR_MAIN
+        for x in range(32):
+            if cells.get((x, 12)) == HAIR_MAIN:
+                cells[(x, 12)] = HAIR_SHADOW
+        for y in range(1, 6):
+            for x in (14, 15, 16, 17):
+                cells[(x, y)] = HAIR_MAIN
+        for x in (16, 17):
+            cells[(x, 5)] = HAIR_SHADOW
+    else:  # mohawk
+        for y in range(3, 12):
+            for x in (15, 16):
+                cells[(x, y)] = HAIR_MAIN
+        for y in range(3, 12):
+            cells[(16, y)] = HAIR_SHADOW
+        for y in range(9, 13):
+            for x in (10, 11, 20, 21):
+                cells[(x, y)] = HAIR_SHADOW
     return cells
+
+
+# ======================================================================
+# 第三代画法：借鉴 BotPixel（MIT）的 32×32 布局思路
+# 头用椭圆/收下巴的掩膜，五官用 4×4 ASCII 精灵，明暗走 3 档
+# 代码为原创实现，仅参考其网格布局与「精灵式五官」的组织方式
+# ======================================================================
+
+INK = "#2B1B12"
+EYE_COLORS = {"K": INK, "W": "#FFFFFF", "I": "#2B2B2B", "D": "#7A8471", "L": "#FFFFFF"}
+BROW_COLOR = INK
+MOUTH_COLORS = {"K": "#B0504D", "W": "#FFFFFF", "M": "#6E1F1F", "T": "#E5807A"}
+
+
+def _ellipse(cx: float, cy: float, rx: float, ry: float):
+    def mask(x: int, y: int) -> bool:
+        dx = (x + 0.5 - cx) / rx
+        dy = (y + 0.5 - cy) / ry
+        return dx * dx + dy * dy <= 1.0
+
+    return mask
+
+
+HEAD_SHAPES = {
+    "round": _ellipse(16, 16.2, 7.8, 8.2),
+    "square": _ellipse(16, 16.0, 8.4, 7.9),
+    "long": _ellipse(16, 16.6, 6.8, 9.3),
+}
+
+
+def face(shape: str) -> CELLMAP:  # noqa: F811
+    mask = HEAD_SHAPES.get(shape, HEAD_SHAPES["round"])
+    cells: CELLMAP = {}
+
+    for y in range(32):
+        for x in range(32):
+            if not mask(x, y):
+                continue
+            border = any(
+                not mask(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+            )
+            cells[(x, y)] = "#C9C9C9" if border else WHITE
+
+    # 下巴与右颊再压一档
+    for y in range(20, 27):
+        for x in range(18, 23):
+            if cells.get((x, y)) == WHITE:
+                cells[(x, y)] = "#E2E2E2"
+
+    # 鼻子
+    cells[(15, 18)] = "#BFBFBF"
+    cells[(16, 18)] = "#BFBFBF"
+
+    # 耳朵
+    for y in (15, 16, 17):
+        if (7, y) not in cells:
+            cells[(7, y)] = WHITE
+        if (24, y) not in cells:
+            cells[(24, y)] = WHITE
+
+    edge: CELLMAP = {}
+    for (x, y) in list(cells):
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            neighbour = (x + dx, y + dy)
+            if neighbour not in cells:
+                edge[neighbour] = INK
+    cells.update(edge)
+    return cells
+
+
+EYE_ART = {
+    "dot": ["....", ".KK.", ".KK.", "...."],
+    "big": ["KKKK", "DWDD", "IDDI", "LIIL"],
+    "star": ["KKKK", "DWDW", "IDDI", "LIWL"],
+    "wink": ["KKKK", "DWDD", "IDDI", "LIIL"],
+}
 
 
 def eyes(kind: str, color: str) -> CELLMAP:  # noqa: F811
+    art = EYE_ART.get(kind, EYE_ART["big"])
     cells: CELLMAP = {}
-    pairs = ((11, 18),)
-
-    for (lx, rx) in pairs:
-        if kind == "dot":
-            for x, y in ((lx, 15), (lx + 1, 15), (rx, 15), (rx + 1, 15)):
-                cells[(x, y)] = color
-        elif kind == "big":
-            for side in (lx, rx):
-                rect(cells, side, 14, side + 2, 16, "#FFFFFF")
-                rect(cells, side, 14, side + 2, 14, color)
-                cells[(side + 1, 15)] = color
-                cells[(side + 1, 16)] = color
-                cells[(side, 15)] = color
-                cells[(side + 2, 15)] = color
-                cells[(side, 15)] = "#FFFFFF"
-        elif kind == "star":
-            for side in (lx, rx):
-                cells[(side + 1, 13)] = color
-                cells[(side, 14)] = color
-                cells[(side + 1, 14)] = color
-                cells[(side + 2, 14)] = color
-                cells[(side + 1, 15)] = "#FFFFFF"
-                cells[(side + 1, 16)] = color
-        else:  # wink
-            rect(cells, lx, 15, lx + 2, 15, color)
-            cells[(lx + 1, 14)] = color
-            rect(cells, rx, 14, rx + 2, 16, "#FFFFFF")
-            cells[(rx + 1, 14)] = color
-            cells[(rx, 15)] = color
-            cells[(rx + 1, 15)] = color
-            cells[(rx + 2, 15)] = color
-            cells[(rx + 1, 16)] = color
+    for start_x in (11, 18):
+        for row, line in enumerate(art):
+            for col, mark in enumerate(line):
+                if mark == ".":
+                    continue
+                cells[(start_x + col, 13 + row)] = EYE_COLORS.get(mark, color)
+    if kind == "wink":
+        # 左眼改成一条闭眼线
+        for x in range(11, 15):
+            for y in range(13, 17):
+                cells.pop((x, y), None)
+        for x in range(11, 15):
+            cells[(x, 15)] = INK
     return cells
+
+
+BROW_ART = {"flat": ["BBBB"], "arch": [".BB."], "thick": ["BBBB", "BBBB"]}
 
 
 def brows(kind: str) -> CELLMAP:  # noqa: F811
+    art = BROW_ART.get(kind, BROW_ART["flat"])
     cells: CELLMAP = {}
-    for side in (10, 17):
-        if kind == "flat":
-            rect(cells, side, 11, side + 4, 11, OUTLINE)
-        elif kind == "arch":
-            rect(cells, side + 1, 11, side + 3, 11, OUTLINE)
-            cells[(side, 12)] = OUTLINE
-            cells[(side + 4, 12)] = OUTLINE
-        else:
-            rect(cells, side, 10, side + 4, 11, OUTLINE)
+    for start_x in (11, 18):
+        for row, line in enumerate(art):
+            for col, mark in enumerate(line):
+                if mark != ".":
+                    cells[(start_x + col, 11 + row)] = BROW_COLOR
     return cells
 
 
+MOUTH_ART = {
+    "smile": ["K..K", ".KK."],
+    "laugh": ["KWWK", ".KK."],
+    "neutral": [".KK."],
+    "smirk": ["...K", ".KK."],
+}
+
+
 def mouth(kind: str, color: str) -> CELLMAP:  # noqa: F811
+    art = MOUTH_ART.get(kind, MOUTH_ART["smile"])
     cells: CELLMAP = {}
-    LIP = color
-    if kind == "smile":
-        rect(cells, 13, 21, 18, 21, LIP)
-        cells[(12, 20)] = LIP
-        cells[(19, 20)] = LIP
-        cells[(15, 22)] = LIP
-        cells[(16, 22)] = LIP
-    elif kind == "laugh":
-        rect(cells, 13, 20, 18, 22, LIP)
-        rect(cells, 14, 20, 17, 20, "#FFFFFF")
-        cells[(13, 20)] = LIP
-        cells[(18, 20)] = LIP
-    elif kind == "neutral":
-        rect(cells, 13, 21, 18, 21, LIP)
-        cells[(13, 22)] = LIP
-        cells[(18, 22)] = LIP
-    else:  # smirk
-        rect(cells, 14, 21, 18, 21, LIP)
-        cells[(13, 22)] = LIP
-        cells[(19, 20)] = LIP
+    start_x = 14
+    start_y = 20
+    for row, line in enumerate(art):
+        for col, mark in enumerate(line):
+            if mark == ".":
+                continue
+            cells[(start_x + col, start_y + row)] = MOUTH_COLORS.get(mark, color)
     return cells
 
 
