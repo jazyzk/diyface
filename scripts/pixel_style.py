@@ -513,21 +513,21 @@ DOG_SPRITE = """
 
 CHICKEN_SPRITE = """
 ................
-......xxx.......
-.....xrrrx......
-.....xrrrx......
+.......xx.......
+......xrrx......
+.....xrrrrx.....
+.....xrrrrx.....
 ....xwwwwwx.....
 ...xwwwwwwwx....
 ...xwkwwwkwx....
 ....xwwwwwx.....
 .....xwowx......
 ....xwwwwwx.....
-....xwwwwwx.....
-....xwwwwx......
+...xwwwwwwwx....
+...xwwwwwwx.....
 ....xx..xx......
-................
-................
-................
+.....x..x.......
+.....x..x.......
 """
 
 COW_SPRITE = """
@@ -787,6 +787,188 @@ def to_image(cells: CELLMAP, tintable: bool) -> tuple[Image.Image, Image.Image |
         if mask is not None and color == WHITE:
             mask.paste(WHITE, px)
     return base, mask
+
+
+
+# ======================================================================
+# 第二代画法：更接近「农场像素游戏」的味道
+# 粗描边、两档肤色阴影、眼睛带高光、鼻子与嘴有层次
+# ======================================================================
+
+SHADE = "#D8D8D8"      # 阴影格（白底相乘后自动变成更深的肤色）
+BLUSH = "#F0B9A8"      # 腮红（非着色层，保留原色）
+
+FACE_GEOMETRY = {
+    # 名字: (左, 右, 上, 下)
+    "round": (9, 22, 8, 25),
+    "square": (8, 23, 8, 26),
+    "long": (10, 21, 7, 27),
+}
+
+
+def face(shape: str) -> CELLMAP:  # noqa: F811 - 覆盖第一代实现
+    left, right, top, bottom = FACE_GEOMETRY.get(shape, FACE_GEOMETRY["round"])
+    cells: CELLMAP = {}
+
+    for y in range(top, bottom + 1):
+        for x in range(left, right + 1):
+            cells[(x, y)] = WHITE
+
+    # 圆角：切掉四角
+    for x, y in (
+        (left, top), (left + 1, top), (right, top), (right - 1, top),
+        (left, bottom), (left + 1, bottom), (right, bottom), (right - 1, bottom),
+    ):
+        cells.pop((x, y), None)
+    for x, y in ((left, top + 1), (right, top + 1), (left, bottom - 1), (right, bottom - 1)):
+        cells.pop((x, y), None)
+
+    # 右下阴影两格，制造体积感
+    for y in range(top + 2, bottom - 1):
+        for x in (right - 1, right - 2):
+            if (x, y) in cells:
+                cells[(x, y)] = SHADE
+    for x in range(left + 2, right - 1):
+        for y in (bottom - 1, bottom - 2):
+            if (x, y) in cells:
+                cells[(x, y)] = SHADE
+
+    # 鼻子（两格阴影，给脸一点起伏）
+    nose_y = bottom - 7
+    cells[(15, nose_y)] = SHADE
+    cells[(16, nose_y)] = SHADE
+
+    # 耳朵
+    for y in (top + 6, top + 7, top + 8):
+        cells[(left - 1, y)] = WHITE
+        cells[(right + 1, y)] = SHADE
+
+    # 兜底描边：所有与空格相邻的格子
+    edge: CELLMAP = {}
+    for (x, y) in list(cells):
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            neighbour = (x + dx, y + dy)
+            if neighbour not in cells:
+                edge[neighbour] = OUTLINE
+    cells.update(edge)
+    return cells
+
+
+def hair(kind: str) -> CELLMAP:  # noqa: F811
+    MAIN = "#F2F2F2"      # 主色（相乘后就是发色）
+    SHADOW = "#C9C9C9"    # 阴影
+    LIGHT = "#FFFFFF"     # 高光
+    cells: CELLMAP = {}
+
+    def cap(x0: int, y0: int, x1: int, y1: int) -> None:
+        rect(cells, x0, y0, x1, y1, MAIN)
+        rect(cells, x0, y1, x1, y1, SHADOW)
+        rect(cells, x0 + 2, y0 + 1, x1 - 2, y0 + 1, LIGHT)
+
+    if kind == "short":
+        cap(8, 6, 23, 10)
+        rect(cells, 8, 10, 9, 11, SHADOW)
+        rect(cells, 22, 10, 23, 11, SHADOW)
+    elif kind == "bob":
+        cap(7, 5, 24, 10)
+        rect(cells, 7, 10, 7, 20, MAIN)
+        rect(cells, 24, 10, 24, 20, SHADOW)
+    elif kind == "long":
+        cap(7, 5, 24, 10)
+        rect(cells, 7, 10, 7, 27, MAIN)
+        rect(cells, 24, 10, 24, 27, SHADOW)
+        rect(cells, 9, 12, 9, 22, SHADOW)
+    elif kind == "bun":
+        cap(8, 7, 23, 10)
+        rect(cells, 14, 3, 17, 6, MAIN)
+        rect(cells, 16, 3, 17, 6, SHADOW)
+    elif kind == "mohawk":
+        rect(cells, 15, 3, 16, 11, MAIN)
+        rect(cells, 16, 3, 16, 11, SHADOW)
+        rect(cells, 14, 4, 14, 8, MAIN)
+        rect(cells, 17, 4, 17, 8, SHADOW)
+    else:  # side
+        cap(8, 5, 23, 9)
+        rect(cells, 20, 9, 23, 15, MAIN)
+        rect(cells, 23, 9, 23, 15, SHADOW)
+        rect(cells, 8, 9, 9, 13, SHADOW)
+    return cells
+
+
+def eyes(kind: str, color: str) -> CELLMAP:  # noqa: F811
+    cells: CELLMAP = {}
+    pairs = ((11, 18),)
+
+    for (lx, rx) in pairs:
+        if kind == "dot":
+            for x, y in ((lx, 15), (lx + 1, 15), (rx, 15), (rx + 1, 15)):
+                cells[(x, y)] = color
+        elif kind == "big":
+            for side in (lx, rx):
+                rect(cells, side, 14, side + 2, 16, "#FFFFFF")
+                rect(cells, side, 14, side + 2, 14, color)
+                cells[(side + 1, 15)] = color
+                cells[(side + 1, 16)] = color
+                cells[(side, 15)] = color
+                cells[(side + 2, 15)] = color
+                cells[(side, 15)] = "#FFFFFF"
+        elif kind == "star":
+            for side in (lx, rx):
+                cells[(side + 1, 13)] = color
+                cells[(side, 14)] = color
+                cells[(side + 1, 14)] = color
+                cells[(side + 2, 14)] = color
+                cells[(side + 1, 15)] = "#FFFFFF"
+                cells[(side + 1, 16)] = color
+        else:  # wink
+            rect(cells, lx, 15, lx + 2, 15, color)
+            cells[(lx + 1, 14)] = color
+            rect(cells, rx, 14, rx + 2, 16, "#FFFFFF")
+            cells[(rx + 1, 14)] = color
+            cells[(rx, 15)] = color
+            cells[(rx + 1, 15)] = color
+            cells[(rx + 2, 15)] = color
+            cells[(rx + 1, 16)] = color
+    return cells
+
+
+def brows(kind: str) -> CELLMAP:  # noqa: F811
+    cells: CELLMAP = {}
+    for side in (10, 17):
+        if kind == "flat":
+            rect(cells, side, 11, side + 4, 11, OUTLINE)
+        elif kind == "arch":
+            rect(cells, side + 1, 11, side + 3, 11, OUTLINE)
+            cells[(side, 12)] = OUTLINE
+            cells[(side + 4, 12)] = OUTLINE
+        else:
+            rect(cells, side, 10, side + 4, 11, OUTLINE)
+    return cells
+
+
+def mouth(kind: str, color: str) -> CELLMAP:  # noqa: F811
+    cells: CELLMAP = {}
+    LIP = color
+    if kind == "smile":
+        rect(cells, 13, 21, 18, 21, LIP)
+        cells[(12, 20)] = LIP
+        cells[(19, 20)] = LIP
+        cells[(15, 22)] = LIP
+        cells[(16, 22)] = LIP
+    elif kind == "laugh":
+        rect(cells, 13, 20, 18, 22, LIP)
+        rect(cells, 14, 20, 17, 20, "#FFFFFF")
+        cells[(13, 20)] = LIP
+        cells[(18, 20)] = LIP
+    elif kind == "neutral":
+        rect(cells, 13, 21, 18, 21, LIP)
+        cells[(13, 22)] = LIP
+        cells[(18, 22)] = LIP
+    else:  # smirk
+        rect(cells, 14, 21, 18, 21, LIP)
+        cells[(13, 22)] = LIP
+        cells[(19, 20)] = LIP
+    return cells
 
 
 JOBS: list[tuple[str, str, bool, list[tuple[str, CELLMAP]]]] = [
